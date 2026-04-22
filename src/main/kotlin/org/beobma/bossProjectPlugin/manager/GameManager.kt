@@ -133,9 +133,7 @@ object GameManager : Listener {
         }
     }
 
-    private class JobSelectionSession(
-        private val game: Game
-    ) {
+    private class JobSelectionSession(private val game: Game) {
         private val allJobClasses = JobRegistry.all()
         private val selectedJobsByPlayer: MutableMap<PlayerData, KClass<out Job>> = mutableMapOf()
         private val pagesByPlayer: MutableMap<PlayerData, Int> = mutableMapOf()
@@ -291,7 +289,7 @@ object GameManager : Listener {
 
         private fun createInventory(playerData: PlayerData, page: Int): Inventory {
             val holder = JobSelectionHolder(this, playerData)
-            val inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, "직업 선택 (${page + 1}/${maxPage() + 1})")
+            val inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, miniMessage.deserialize("직업 선택 (${page + 1}/${maxPage() + 1})"))
             holder.holderInventory = inventory
 
             fillClassItems(inventory, page)
@@ -394,10 +392,7 @@ object GameManager : Listener {
         }
     }
 
-    private class JobSelectionHolder(
-        val session: JobSelectionSession,
-        val playerData: PlayerData
-    ) : InventoryHolder {
+    private class JobSelectionHolder(val session: JobSelectionSession, val playerData: PlayerData) : InventoryHolder {
         lateinit var holderInventory: Inventory
         override fun getInventory(): Inventory = holderInventory
     }
