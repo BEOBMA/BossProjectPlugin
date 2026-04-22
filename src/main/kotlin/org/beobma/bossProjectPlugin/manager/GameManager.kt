@@ -128,7 +128,7 @@ object GameManager : Listener {
             Bukkit.getOnlinePlayers().forEach { it.closeInventory() }
             runStepDelay {
                 // TODO: 게임 시작 로직은 추후 구현 예정
-                Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되었습니다. 게임 시작 로직은 추후 구현 예정입니다.</green>"))
+                Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되었습니다.</green>"))
             }
         }
     }
