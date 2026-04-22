@@ -292,7 +292,7 @@ object GameManager : Listener {
         private fun createInventory(playerData: PlayerData, page: Int): Inventory {
             val holder = JobSelectionHolder(this, playerData)
             val inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, "직업 선택 (${page + 1}/${maxPage() + 1})")
-            holder.inventory = inventory
+            holder.holderInventory = inventory
 
             fillClassItems(inventory, page)
             fillRandomItem(inventory)
@@ -398,7 +398,7 @@ object GameManager : Listener {
         val session: JobSelectionSession,
         val playerData: PlayerData
     ) : InventoryHolder {
-        lateinit var inventory: Inventory
-        override fun getInventory(): Inventory = inventory
+        lateinit var holderInventory: Inventory
+        override fun getInventory(): Inventory = holderInventory
     }
 }
