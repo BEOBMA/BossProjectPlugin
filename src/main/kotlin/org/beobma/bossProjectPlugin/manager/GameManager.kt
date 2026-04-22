@@ -131,11 +131,6 @@ object GameManager : Listener {
                 val enemyEntry = EnemyRegistry.randomEnemy()
                 val mapData = enemyEntry.mapData
                 val spawnLocation = mapData.spawnLocation()
-                if (spawnLocation == null) {
-                    Bukkit.broadcast(miniMessage.deserialize("<red>${mapData.worldName} 월드를 찾을 수 없어 게임을 중단합니다.</red>"))
-                    currentGame = null
-                    return@runStepDelay
-                }
 
                 game.setupMap(mapData)
                 game.setupBoss(enemyEntry.factory(game, spawnLocation))
