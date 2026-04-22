@@ -1,0 +1,6 @@
+name: BossProjectPlugin
+version: '${version}'
+
+main: org.beobma.bossProjectPlugin.BossProjectPlugin
+api-version: '26.1.2'
+load: POSTWORLD
