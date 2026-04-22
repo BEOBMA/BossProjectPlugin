@@ -8,6 +8,7 @@ import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.beobma.bossProjectPlugin.game.Game
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Entity
 import org.bukkit.entity.EntityType
@@ -50,7 +51,7 @@ class TrainingBossData(
     }
 
     private fun spawnInteraction(location: Location): Entity {
-        val interaction = location.world.spawnEntity(location, EntityType.INTERACTION) as Interaction
+        val interaction = Bukkit.worlds.first().spawnEntity(location, EntityType.INTERACTION) as Interaction
         interaction.scoreboardTags.add(interactionTag)
         interaction.interactionWidth = 2.5f
         interaction.interactionHeight = 3.0f
