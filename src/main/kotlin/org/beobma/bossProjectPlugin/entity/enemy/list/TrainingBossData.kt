@@ -8,15 +8,10 @@ import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.beobma.bossProjectPlugin.game.Game
-import org.bukkit.Bukkit
-import org.bukkit.Location
 import org.bukkit.entity.Entity
-import org.bukkit.entity.EntityType
-import org.bukkit.entity.Interaction
 
 class TrainingBossData(
-    private val initGame: Game,
-    spawnLocation: Location
+    private val initGame: Game
 ) : EnemyData() {
     companion object {
         val MAP_DATA = BossBattleMapData(
@@ -43,18 +38,16 @@ class TrainingBossData(
 
     override val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
 
-    override val entity: Entity = spawnInteraction(spawnLocation)
+    override val entity: Entity = findExistingBossEntity()
 
     init {
         passives.forEach { it.inject(this) }
         patternSkills.forEach { it.inject(this) }
     }
 
-    private fun spawnInteraction(location: Location): Entity {
-        val interaction = Bukkit.getWorlds().first().spawnEntity(location, EntityType.INTERACTION) as Interaction
-        interaction.scoreboardTags.add(interactionTag)
-        interaction.interactionWidth = 2.5f
-        interaction.interactionHeight = 3.0f
-        return interaction
+    private fun findExistingBossEntity(): Entity {
+        val world = mapData.world()
+        return world.entities.firstOrNull { it.scoreboardTags.contains(interactionTag) }
+            ?: error("보스 엔티티 태그 '$interactionTag' 를 가진 엔티티를 월드 '${world.name}' 에서 찾지 못했습니다.")
     }
 }

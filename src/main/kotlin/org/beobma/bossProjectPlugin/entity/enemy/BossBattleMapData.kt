@@ -22,7 +22,8 @@ data class BossBattleMapData(
     val deathLimit: Int? = 3,
     val timeLimitMinutes: Int? = 30
 ) {
-    fun world(): World = Bukkit.getWorlds().first()
+    fun world(): World = Bukkit.getWorld(worldName)
+        ?: error("월드 '$worldName' 를 찾을 수 없습니다. 보스전 전용 맵이 로드되어 있는지 확인해주세요.")
 
     fun spawnLocation(): Location {
         return Location(world(), spawnX, spawnY, spawnZ, yaw, pitch)
