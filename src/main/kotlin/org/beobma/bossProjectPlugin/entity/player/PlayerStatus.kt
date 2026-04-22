@@ -1,4 +1,6 @@
 package org.beobma.bossProjectPlugin.entity.player
 
-class PlayerStatus {
+import org.beobma.bossProjectPlugin.entity.EntityStatus
+
+class PlayerStatus : EntityStatus() {
 }

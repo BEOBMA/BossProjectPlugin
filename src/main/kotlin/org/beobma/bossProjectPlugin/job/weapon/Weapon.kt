@@ -1,4 +1,7 @@
 package org.beobma.bossProjectPlugin.job.weapon
 
-class Weapon {
+import org.bukkit.inventory.ItemStack
+
+abstract class Weapon {
+    abstract val itemStack: ItemStack
 }

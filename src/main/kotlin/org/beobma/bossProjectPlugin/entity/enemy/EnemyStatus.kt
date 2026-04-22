@@ -1,4 +1,6 @@
 package org.beobma.bossProjectPlugin.entity.enemy
 
-class EnemyStatus {
+import org.beobma.bossProjectPlugin.entity.EntityStatus
+
+abstract class EnemyStatus : EntityStatus() {
 }
