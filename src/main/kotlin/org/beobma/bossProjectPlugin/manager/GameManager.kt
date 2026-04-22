@@ -1,13 +1,48 @@
 package org.beobma.bossProjectPlugin.manager
 
+import net.kyori.adventure.text.minimessage.MiniMessage
+import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.game.Game
+import org.beobma.bossProjectPlugin.job.Job
+import org.beobma.bossProjectPlugin.job.registry.JobRegistry
+import org.bukkit.Bukkit
+import org.bukkit.Material
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.InventoryHolder
+import org.bukkit.inventory.ItemStack
+import org.bukkit.persistence.PersistentDataType
+import org.bukkit.scheduler.BukkitRunnable
+import org.bukkit.scheduler.BukkitTask
+import kotlin.math.ceil
+import kotlin.reflect.KClass
+import kotlin.random.Random
 
-object GameManager {
+object GameManager : Listener {
+    private const val STEP_DELAY_TICKS = 10L
+    private const val JOB_SELECT_TIMEOUT_TICKS = 20L * 30L
+    private const val INVENTORY_SIZE = 54
+    private const val PAGE_CAPACITY = 44
+
+    private var listenerRegistered = false
     private var currentGame: Game? = null
+    private var activeSession: JobSelectionSession? = null
+
+    private val miniMessage = MiniMessage.miniMessage()
+
+    private val randomKey by lazy { org.bukkit.NamespacedKey(BossProjectPlugin.instance, "job_random") }
+    private val pagePrevKey by lazy { org.bukkit.NamespacedKey(BossProjectPlugin.instance, "job_prev") }
+    private val pageNextKey by lazy { org.bukkit.NamespacedKey(BossProjectPlugin.instance, "job_next") }
+    private val jobClassKey by lazy { org.bukkit.NamespacedKey(BossProjectPlugin.instance, "job_class") }
 
     fun startGame(players: Collection<Player>) {
+        ensureListenerRegistered()
+
         val game = Game()
         players.forEach { player ->
             game.playerDatas.add(PlayerData(player, game))
@@ -19,10 +54,351 @@ object GameManager {
     fun Game.start() {
         currentGame = this
 
-        TODO("게임 시작 로직은 추후 구현 예정")
+        runStepDelay {
+            startJobSelection(this@start)
+        }
     }
 
-    fun getCurrentGame(): Game? {
-        return currentGame
+    fun getCurrentGame(): Game? = currentGame
+
+    @EventHandler
+    fun onJobInventoryClick(event: InventoryClickEvent) {
+        val holder = event.view.topInventory.holder as? JobSelectionHolder ?: return
+        val session = activeSession
+        if (session !== holder.session) {
+            event.isCancelled = true
+            return
+        }
+
+        event.isCancelled = true
+
+        val player = event.whoClicked as? Player ?: return
+        session.handleClick(player, event.currentItem)
+    }
+
+    @EventHandler
+    fun onJobInventoryClose(event: InventoryCloseEvent) {
+        val holder = event.view.topInventory.holder as? JobSelectionHolder ?: return
+        val session = activeSession
+        if (session !== holder.session) {
+            return
+        }
+
+        val player = event.player as? Player ?: return
+        session.onClose(player)
+    }
+
+    private fun ensureListenerRegistered() {
+        if (listenerRegistered) return
+
+        Bukkit.getPluginManager().registerEvents(this, BossProjectPlugin.instance)
+        listenerRegistered = true
+    }
+
+    private fun runStepDelay(block: () -> Unit) {
+        Bukkit.getScheduler().runTaskLater(BossProjectPlugin.instance, Runnable {
+            block()
+        }, STEP_DELAY_TICKS)
+    }
+
+    private fun startJobSelection(game: Game) {
+        if (activeSession != null) {
+            Bukkit.broadcast(miniMessage.deserialize("<red>이미 직업 선택이 진행 중입니다.</red>"))
+            return
+        }
+
+        val totalPlayers = game.playerDatas.size
+        val available = JobRegistry.all().size
+
+        if (available < totalPlayers) {
+            Bukkit.broadcast(
+                miniMessage.deserialize("<red>직업 수가 플레이어 수보다 적어 게임을 시작할 수 없습니다. (${available}/${totalPlayers})</red>")
+            )
+            currentGame = null
+            return
+        }
+
+        val session = JobSelectionSession(game)
+        activeSession = session
+        session.openAll()
+    }
+
+    private fun finalizeAfterSelection(game: Game) {
+        runStepDelay {
+            Bukkit.getOnlinePlayers().forEach { it.closeInventory() }
+            runStepDelay {
+                // TODO: 게임 시작 로직은 추후 구현 예정
+                Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되었습니다. 게임 시작 로직은 추후 구현 예정입니다.</green>"))
+            }
+        }
+    }
+
+    private class JobSelectionSession(
+        private val game: Game
+    ) {
+        private val allJobClasses = JobRegistry.all()
+        private val selectedJobsByPlayer: MutableMap<PlayerData, KClass<out Job>> = mutableMapOf()
+        private val pagesByPlayer: MutableMap<PlayerData, Int> = mutableMapOf()
+        private val inventoriesByPlayer: MutableMap<PlayerData, Inventory> = mutableMapOf()
+        private val timeoutTask: BukkitTask
+
+        init {
+            timeoutTask = object : BukkitRunnable() {
+                override fun run() {
+                    if (activeSession !== this@JobSelectionSession) {
+                        cancel()
+                        return
+                    }
+
+                    autoSelectForPendingPlayers()
+                    completeIfDone()
+                }
+            }.runTaskLater(BossProjectPlugin.instance, JOB_SELECT_TIMEOUT_TICKS)
+        }
+
+        fun openAll() {
+            val totalSeconds = JOB_SELECT_TIMEOUT_TICKS / 20
+
+            game.playerDatas.forEach { playerData ->
+                pagesByPlayer[playerData] = 0
+                val inventory = createInventory(playerData, 0)
+                inventoriesByPlayer[playerData] = inventory
+                playerData.player.openInventory(inventory)
+                playerData.player.sendMessage(
+                    miniMessage.deserialize("<yellow>${totalSeconds}초 안에 직업을 선택해주세요. 미선택 시 자동 랜덤 선택됩니다.</yellow>")
+                )
+            }
+        }
+
+        fun onClose(player: Player) {
+            val playerData = game.playerDatas.firstOrNull { it.player.uniqueId == player.uniqueId } ?: return
+            if (selectedJobsByPlayer[playerData] != null) return
+
+            Bukkit.getScheduler().runTaskLater(BossProjectPlugin.instance, Runnable {
+                if (activeSession !== this@JobSelectionSession) return@Runnable
+                if (selectedJobsByPlayer[playerData] != null) return@Runnable
+                val page = pagesByPlayer[playerData] ?: 0
+                val inventory = createInventory(playerData, page)
+                inventoriesByPlayer[playerData] = inventory
+                player.openInventory(inventory)
+            }, 1L)
+        }
+
+        fun handleClick(player: Player, currentItem: ItemStack?) {
+            val playerData = game.playerDatas.firstOrNull { it.player.uniqueId == player.uniqueId } ?: return
+            if (selectedJobsByPlayer[playerData] != null) return
+            val item = currentItem ?: return
+            val meta = item.itemMeta ?: return
+            val data = meta.persistentDataContainer
+
+            when {
+                data.has(pagePrevKey, PersistentDataType.INTEGER) -> {
+                    val currentPage = pagesByPlayer[playerData] ?: 0
+                    openPage(playerData, (currentPage - 1).coerceAtLeast(0))
+                }
+
+                data.has(pageNextKey, PersistentDataType.INTEGER) -> {
+                    val currentPage = pagesByPlayer[playerData] ?: 0
+                    val maxPage = maxPage()
+                    openPage(playerData, (currentPage + 1).coerceAtMost(maxPage))
+                }
+
+                data.has(randomKey, PersistentDataType.INTEGER) -> {
+                    val randomJob = pickRandomAvailableJob()
+                    if (randomJob == null) {
+                        player.sendMessage(miniMessage.deserialize("<red>선택 가능한 직업이 없습니다.</red>"))
+                        return
+                    }
+                    selectJob(playerData, randomJob, true)
+                }
+
+                data.has(jobClassKey, PersistentDataType.STRING) -> {
+                    val className = data.get(jobClassKey, PersistentDataType.STRING) ?: return
+                    val jobClass = allJobClasses.firstOrNull { it.qualifiedName == className } ?: return
+                    if (isJobTaken(jobClass)) {
+                        player.sendMessage(miniMessage.deserialize("<red>이미 다른 플레이어가 선택한 직업입니다.</red>"))
+                        refreshAllInventories()
+                        return
+                    }
+                    selectJob(playerData, jobClass, false)
+                }
+            }
+        }
+
+        private fun selectJob(playerData: PlayerData, jobClass: KClass<out Job>, random: Boolean) {
+            if (isJobTaken(jobClass)) {
+                playerData.player.sendMessage(miniMessage.deserialize("<red>이미 선택된 직업입니다.</red>"))
+                return
+            }
+
+            val job = JobRegistry.create(jobClass)
+            if (job == null) {
+                playerData.player.sendMessage(miniMessage.deserialize("<red>직업 생성에 실패했습니다.</red>"))
+                return
+            }
+
+            selectedJobsByPlayer[playerData] = jobClass
+            playerData.selectJob(job)
+
+            val selectedTypeText = if (random) "랜덤" else "직접"
+            playerData.player.sendMessage(
+                miniMessage.deserialize("<green>${selectedTypeText} 선택 완료: ${job.name}</green>")
+            )
+
+            refreshAllInventories()
+            completeIfDone()
+        }
+
+        private fun autoSelectForPendingPlayers() {
+            game.playerDatas.forEach { playerData ->
+                if (selectedJobsByPlayer[playerData] != null) return@forEach
+                val randomJob = pickRandomAvailableJob() ?: return@forEach
+                selectJob(playerData, randomJob, true)
+            }
+        }
+
+        private fun completeIfDone() {
+            if (selectedJobsByPlayer.size != game.playerDatas.size) {
+                return
+            }
+
+            timeoutTask.cancel()
+            activeSession = null
+
+            finalizeAfterSelection(game)
+        }
+
+        private fun openPage(playerData: PlayerData, page: Int) {
+            pagesByPlayer[playerData] = page
+            val inventory = createInventory(playerData, page)
+            inventoriesByPlayer[playerData] = inventory
+            playerData.player.openInventory(inventory)
+        }
+
+        private fun refreshAllInventories() {
+            game.playerDatas.forEach { playerData ->
+                if (selectedJobsByPlayer[playerData] != null) return@forEach
+                val page = pagesByPlayer[playerData] ?: 0
+                val opened = playerData.player.openInventory.topInventory
+                val holder = opened.holder as? JobSelectionHolder
+                if (holder?.session !== this) return@forEach
+
+                val inventory = createInventory(playerData, page)
+                inventoriesByPlayer[playerData] = inventory
+                playerData.player.openInventory(inventory)
+            }
+        }
+
+        private fun createInventory(playerData: PlayerData, page: Int): Inventory {
+            val holder = JobSelectionHolder(this, playerData)
+            val inventory = Bukkit.createInventory(holder, INVENTORY_SIZE, "직업 선택 (${page + 1}/${maxPage() + 1})")
+            holder.inventory = inventory
+
+            fillClassItems(inventory, page)
+            fillRandomItem(inventory)
+            fillNavigation(inventory, page)
+
+            return inventory
+        }
+
+        private fun fillClassItems(inventory: Inventory, page: Int) {
+            val offset = page * PAGE_CAPACITY
+            val slice = allJobClasses.drop(offset).take(PAGE_CAPACITY)
+            slice.forEachIndexed { index, jobClass ->
+                val slot = index + 1
+                val item = if (isJobTaken(jobClass)) {
+                    createLockedItem(jobClass)
+                } else {
+                    createJobItem(jobClass)
+                }
+                inventory.setItem(slot, item)
+            }
+        }
+
+        private fun fillRandomItem(inventory: Inventory) {
+            val item = ItemStack(Material.NETHER_STAR)
+            val meta = item.itemMeta
+            meta.displayName(miniMessage.deserialize("<aqua><bold>무작위 직업 선택</bold></aqua>"))
+            meta.lore(
+                listOf(
+                    miniMessage.deserialize("<gray>선택 가능한 직업 중에서</gray>"),
+                    miniMessage.deserialize("<gray>무작위로 하나를 선택합니다.</gray>")
+                )
+            )
+            meta.persistentDataContainer.set(randomKey, PersistentDataType.INTEGER, 1)
+            item.itemMeta = meta
+            inventory.setItem(0, item)
+        }
+
+        private fun fillNavigation(inventory: Inventory, page: Int) {
+            if (allJobClasses.size <= PAGE_CAPACITY) {
+                return
+            }
+
+            if (page > 0) {
+                val prev = ItemStack(Material.ARROW)
+                val meta = prev.itemMeta
+                meta.displayName(miniMessage.deserialize("<yellow>이전 페이지</yellow>"))
+                meta.persistentDataContainer.set(pagePrevKey, PersistentDataType.INTEGER, 1)
+                prev.itemMeta = meta
+                inventory.setItem(45, prev)
+            }
+
+            if (page < maxPage()) {
+                val next = ItemStack(Material.ARROW)
+                val meta = next.itemMeta
+                meta.displayName(miniMessage.deserialize("<yellow>다음 페이지</yellow>"))
+                meta.persistentDataContainer.set(pageNextKey, PersistentDataType.INTEGER, 1)
+                next.itemMeta = meta
+                inventory.setItem(53, next)
+            }
+        }
+
+        private fun createJobItem(jobClass: KClass<out Job>): ItemStack {
+            val job = JobRegistry.create(jobClass) ?: return ItemStack(Material.BARRIER)
+            val item = job.toItem()
+            val meta = item.itemMeta ?: return item
+            meta.persistentDataContainer.set(jobClassKey, PersistentDataType.STRING, jobClass.qualifiedName ?: jobClass.simpleName.orEmpty())
+            item.itemMeta = meta
+            return item
+        }
+
+        private fun createLockedItem(jobClass: KClass<out Job>): ItemStack {
+            val base = createJobItem(jobClass)
+            val item = ItemStack(Material.BARRIER)
+            val meta = item.itemMeta
+            meta.displayName(miniMessage.deserialize("<red>선택 불가</red>"))
+
+            val baseName = base.itemMeta?.displayName() ?: miniMessage.deserialize("<gray>알 수 없는 직업</gray>")
+            meta.lore(
+                listOf(
+                    miniMessage.deserialize("<gray>이미 다른 플레이어가 선택한 직업입니다.</gray>"),
+                    baseName
+                )
+            )
+            item.itemMeta = meta
+            return item
+        }
+
+        private fun isJobTaken(jobClass: KClass<out Job>): Boolean = selectedJobsByPlayer.values.contains(jobClass)
+
+        private fun pickRandomAvailableJob(): KClass<out Job>? {
+            val available = allJobClasses.filterNot(::isJobTaken)
+            if (available.isEmpty()) return null
+            return available[Random.nextInt(available.size)]
+        }
+
+        private fun maxPage(): Int {
+            if (allJobClasses.isEmpty()) return 0
+            return ceil(allJobClasses.size / PAGE_CAPACITY.toDouble()).toInt() - 1
+        }
+    }
+
+    private class JobSelectionHolder(
+        val session: JobSelectionSession,
+        val playerData: PlayerData
+    ) : InventoryHolder {
+        lateinit var inventory: Inventory
+        override fun getInventory(): Inventory = inventory
     }
 }

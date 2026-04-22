@@ -3,6 +3,7 @@ package org.beobma.bossProjectPlugin.entity.player
 import org.beobma.bossProjectPlugin.entity.EntityData
 import org.beobma.bossProjectPlugin.entity.EntityStatus
 import org.beobma.bossProjectPlugin.game.Game
+import org.beobma.bossProjectPlugin.job.Job
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 
@@ -13,4 +14,12 @@ class PlayerData(
     override val entity: Entity = player
     override val game: Game = initGame
     override val status: EntityStatus = PlayerStatus()
+
+    var selectedJob: Job? = null
+        private set
+
+    fun selectJob(job: Job) {
+        selectedJob = job
+        job.inject(this)
+    }
 }

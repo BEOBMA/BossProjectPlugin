@@ -1,5 +1,6 @@
 package org.beobma.bossProjectPlugin.job
 
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.entity.player.PlayerStatus
 import org.beobma.bossProjectPlugin.game.Game
@@ -30,5 +31,17 @@ abstract class Job {
         this.player = playerData.player
         this.playerStatus = playerData.status
         this.game = playerData.initGame
+    }
+
+    fun toItem(): ItemStack {
+        val item = classItem.clone()
+        val meta = item.itemMeta ?: return item
+        val miniMessage = MiniMessage.miniMessage()
+
+        meta.displayName(miniMessage.deserialize(name))
+        meta.lore(description.map(miniMessage::deserialize))
+        item.itemMeta = meta
+
+        return item
     }
 }
