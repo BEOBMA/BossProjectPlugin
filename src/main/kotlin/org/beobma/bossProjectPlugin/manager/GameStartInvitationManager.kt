@@ -1,8 +1,8 @@
 package org.beobma.bossProjectPlugin.manager
 
 import org.beobma.bossProjectPlugin.BossProjectPlugin
+import net.kyori.adventure.text.minimessage.MiniMessage
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -20,12 +20,13 @@ class GameStartInvitationManager(
     private val timeoutTicks: Long = 20L * 15L
 ) : Listener {
     private var currentSession: InvitationSession? = null
+    private val miniMessage = MiniMessage.miniMessage()
 
     fun hasActiveSession(): Boolean = currentSession != null
 
     fun requestStart(initiator: Player, targetPlayers: List<Player>) {
         if (currentSession != null) {
-            initiator.sendMessage("${ChatColor.RED}이미 진행 중인 게임 시작 요청이 있습니다.")
+            initiator.sendMessage(miniMessage.deserialize("<red>이미 진행 중인 게임 시작 요청이 있습니다.</red>"))
             return
         }
 
@@ -63,12 +64,12 @@ class GameStartInvitationManager(
 
         val player = event.player as? Player ?: return
         if (session.isPending(player.uniqueId)) {
-            player.sendMessage("${ChatColor.YELLOW}시간 내 선택하지 않으면 자동으로 거절 처리됩니다.")
+            player.sendMessage(miniMessage.deserialize("<yellow>시간 내 선택하지 않으면 자동으로 거절 처리됩니다.</yellow>"))
         }
     }
 
     private inner class InvitationSession(players: List<Player>) {
-        private val title = "게임 참가 여부"
+        private val title = miniMessage.deserialize("<gold>게임 참가 여부</gold>")
         private val responses: MutableMap<UUID, Boolean?> = players.associate { it.uniqueId to null }.toMutableMap()
         private val inventories: MutableMap<UUID, Inventory> = mutableMapOf()
 
@@ -86,7 +87,7 @@ class GameStartInvitationManager(
                 val inventory = createInviteInventory(totalSeconds)
                 inventories[onlinePlayer.uniqueId] = inventory
                 onlinePlayer.openInventory(inventory)
-                onlinePlayer.sendMessage("${ChatColor.GOLD}게임 참가 요청이 도착했습니다. ${totalSeconds}초 내로 선택해주세요.")
+                onlinePlayer.sendMessage(miniMessage.deserialize("<gold>게임 참가 요청이 도착했습니다. ${totalSeconds}초 내로 선택해주세요.</gold>"))
             }
         }
 
@@ -111,7 +112,7 @@ class GameStartInvitationManager(
 
             responses[player.uniqueId] = accepted
             val message = if (accepted) "참가" else "거절"
-            player.sendMessage("${ChatColor.AQUA}게임 참가 의사: $message")
+            player.sendMessage(miniMessage.deserialize("<aqua>게임 참가 의사: ${message}</aqua>"))
 
             if (responses.values.none { it == null }) {
                 finalizeRequest()
@@ -129,17 +130,19 @@ class GameStartInvitationManager(
 
             val participants = responses.filterValues { it == true }.keys.mapNotNull { Bukkit.getPlayer(it) }
             val pendingPlayers = responses.filterValues { it == null }.keys.mapNotNull { Bukkit.getPlayer(it) }
-            pendingPlayers.forEach { it.sendMessage("${ChatColor.RED}응답 시간이 초과되어 거절 처리되었습니다.") }
+            pendingPlayers.forEach {
+                it.sendMessage(miniMessage.deserialize("<red>응답 시간이 초과되어 거절 처리되었습니다.</red>"))
+            }
 
             Bukkit.getOnlinePlayers().forEach { player ->
-                val summary = "${ChatColor.GRAY}게임 참가자 수: ${participants.size}/${responses.size}"
+                val summary = miniMessage.deserialize("<gray>게임 참가자 수: ${participants.size}/${responses.size}</gray>")
                 player.sendMessage(summary)
             }
 
             currentSession = null
 
             if (participants.isEmpty()) {
-                Bukkit.broadcastMessage("${ChatColor.RED}참가자가 없어 게임 시작이 취소되었습니다.")
+                Bukkit.broadcast(miniMessage.deserialize("<red>참가자가 없어 게임 시작이 취소되었습니다.</red>"))
                 return
             }
 
@@ -148,16 +151,16 @@ class GameStartInvitationManager(
 
         private fun createInviteInventory(totalSeconds: Long): Inventory {
             val inventory = Bukkit.createInventory(null, 9, title)
-            inventory.setItem(3, createItem(Material.LIME_WOOL, "${ChatColor.GREEN}참가"))
-            inventory.setItem(5, createItem(Material.RED_WOOL, "${ChatColor.RED}거절"))
-            inventory.setItem(8, createItem(Material.CLOCK, "${ChatColor.YELLOW}제한 시간: ${totalSeconds}초"))
+            inventory.setItem(3, createItem(Material.LIME_WOOL, "<green>참가</green>"))
+            inventory.setItem(5, createItem(Material.RED_WOOL, "<red>거절</red>"))
+            inventory.setItem(8, createItem(Material.CLOCK, "<yellow>제한 시간: ${totalSeconds}초</yellow>"))
             return inventory
         }
 
         private fun createItem(material: Material, displayName: String): ItemStack {
             val item = ItemStack(material)
             val meta: ItemMeta? = item.itemMeta
-            meta?.setDisplayName(displayName)
+            meta?.displayName(miniMessage.deserialize(displayName))
             item.itemMeta = meta
             return item
         }
