@@ -133,7 +133,7 @@ object GameManager : Listener {
                 val spawnLocation = mapData.spawnLocation()
 
                 game.setupMap(mapData)
-                game.setupBoss(enemyEntry.factory(game, spawnLocation))
+                game.setupBoss(enemyEntry.factory(game))
                 game.initializeBattleState()
 
                 game.playerDatas.forEach { playerData ->
