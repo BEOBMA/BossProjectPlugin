@@ -4,6 +4,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.game.Game
+import org.beobma.bossProjectPlugin.entity.enemy.list.EnemyRegistry
 import org.beobma.bossProjectPlugin.job.Job
 import org.beobma.bossProjectPlugin.job.registry.JobRegistry
 import org.bukkit.Bukkit
@@ -127,8 +128,25 @@ object GameManager : Listener {
         runStepDelay {
             Bukkit.getOnlinePlayers().forEach { it.closeInventory() }
             runStepDelay {
-                // TODO: 게임 시작 로직은 추후 구현 예정
-                Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되었습니다.</green>"))
+                val enemyEntry = EnemyRegistry.randomEnemy()
+                val mapData = enemyEntry.mapData
+                val spawnLocation = mapData.spawnLocation()
+                if (spawnLocation == null) {
+                    Bukkit.broadcast(miniMessage.deserialize("<red>${mapData.worldName} 월드를 찾을 수 없어 게임을 중단합니다.</red>"))
+                    currentGame = null
+                    return@runStepDelay
+                }
+
+                game.setupMap(mapData)
+                game.setupBoss(enemyEntry.factory(game, spawnLocation))
+                game.initializeBattleState()
+
+                game.playerDatas.forEach { playerData ->
+                    playerData.player.teleport(spawnLocation)
+                }
+
+                Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되어 보스전 맵으로 이동합니다.</green>"))
+                Bukkit.broadcast(miniMessage.deserialize("<yellow>선택된 보스: ${game.bossData::class.simpleName}</yellow>"))
             }
         }
     }

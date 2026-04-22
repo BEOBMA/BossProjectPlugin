@@ -1,6 +1,7 @@
 package org.beobma.bossProjectPlugin
 
 import org.beobma.bossProjectPlugin.command.StartGameCommand
+import org.beobma.bossProjectPlugin.manager.BossInteractionDamageListener
 import org.beobma.bossProjectPlugin.manager.GameStartInvitationManager
 import org.bukkit.plugin.java.JavaPlugin
 
@@ -16,6 +17,7 @@ class BossProjectPlugin : JavaPlugin() {
 
         gameStartInvitationManager = GameStartInvitationManager(this)
         server.pluginManager.registerEvents(gameStartInvitationManager, this)
+        server.pluginManager.registerEvents(BossInteractionDamageListener, this)
         getCommand("startgame")?.setExecutor(StartGameCommand(gameStartInvitationManager))
 
         loggerInfo("플러그인이 정상적으로 활성화되었습니다.")
