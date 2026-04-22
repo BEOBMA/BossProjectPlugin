@@ -4,3 +4,8 @@ version: '${version}'
 main: org.beobma.bossProjectPlugin.BossProjectPlugin
 api-version: '26.1.2'
 load: POSTWORLD
+
+commands:
+  startgame:
+    description: OP 플레이어가 게임 시작을 요청합니다.
+    usage: /startgame
