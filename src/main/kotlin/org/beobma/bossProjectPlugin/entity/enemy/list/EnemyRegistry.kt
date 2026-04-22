@@ -1,0 +1,22 @@
+package org.beobma.bossProjectPlugin.entity.enemy.list
+
+import org.beobma.bossProjectPlugin.entity.enemy.BossBattleMapData
+import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
+import org.beobma.bossProjectPlugin.game.Game
+import org.bukkit.Location
+import kotlin.random.Random
+
+typealias EnemyFactory = (Game, Location) -> EnemyData
+
+data class RegisteredEnemy(
+    val mapData: BossBattleMapData,
+    val factory: EnemyFactory
+)
+
+object EnemyRegistry {
+    private val enemies: List<RegisteredEnemy> = listOf(
+        RegisteredEnemy(TrainingBossData.MAP_DATA, ::TrainingBossData)
+    )
+
+    fun randomEnemy(): RegisteredEnemy = enemies[Random.nextInt(enemies.size)]
+}
