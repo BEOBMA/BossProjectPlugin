@@ -2,6 +2,7 @@ package org.beobma.bossProjectPlugin.manager
 
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.BossProjectPlugin
+import org.beobma.bossProjectPlugin.entity.enemy.EnemyStatus
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.game.Game
 import org.beobma.bossProjectPlugin.entity.enemy.list.EnemyRegistry
@@ -33,6 +34,7 @@ object GameManager : Listener {
     private var listenerRegistered = false
     private var currentGame: Game? = null
     private var activeSession: JobSelectionSession? = null
+    private var bossLoopTask: BukkitTask? = null
 
     private val miniMessage = MiniMessage.miniMessage()
 
@@ -142,9 +144,29 @@ object GameManager : Listener {
 
                 Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되어 보스전 맵으로 이동합니다.</green>"))
                 Bukkit.broadcast(miniMessage.deserialize("<yellow>선택된 보스: ${game.bossData::class.simpleName}</yellow>"))
+                startBossLoop(game)
             }
         }
     }
+
+    private fun startBossLoop(game: Game) {
+        bossLoopTask?.cancel()
+        bossLoopTask = object : BukkitRunnable() {
+            override fun run() {
+                if (currentGame !== game) {
+                    cancel()
+                    return
+                }
+
+                val status = game.bossData.status as? EnemyStatus
+                status?.let { it.elapsedTicks += 20L }
+
+                game.bossData.passives.forEach { it.onTick() }
+                game.bossData.patternSkills.forEach { it.use() }
+            }
+        }.runTaskTimer(BossProjectPlugin.instance, 20L, 20L)
+    }
+
 
     private class JobSelectionSession(private val game: Game) {
         private val allJobClasses = JobRegistry.all()
