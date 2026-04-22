@@ -35,6 +35,7 @@ object GameManager : Listener {
     private var currentGame: Game? = null
     private var activeSession: JobSelectionSession? = null
     private var bossLoopTask: BukkitTask? = null
+    private var patternOnlyTestMode: Boolean = false
 
     private val miniMessage = MiniMessage.miniMessage()
 
@@ -63,6 +64,12 @@ object GameManager : Listener {
     }
 
     fun getCurrentGame(): Game? = currentGame
+
+    fun setPatternOnlyTestMode(enabled: Boolean) {
+        patternOnlyTestMode = enabled
+    }
+
+    fun isPatternOnlyTestMode(): Boolean = patternOnlyTestMode
 
     @EventHandler
     fun onJobInventoryClick(event: InventoryClickEvent) {
@@ -161,7 +168,9 @@ object GameManager : Listener {
                 val status = game.bossData.status as? EnemyStatus
                 status?.let { it.elapsedTicks += 20L }
 
-                game.bossData.passives.forEach { it.onTick() }
+                if (!patternOnlyTestMode) {
+                    game.bossData.passives.forEach { it.onTick() }
+                }
                 game.bossData.patternSkills.forEach { it.use() }
             }
         }.runTaskTimer(BossProjectPlugin.instance, 20L, 20L)
