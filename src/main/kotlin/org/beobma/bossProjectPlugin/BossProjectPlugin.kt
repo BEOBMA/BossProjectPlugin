@@ -1,5 +1,6 @@
 package org.beobma.bossProjectPlugin
 
+import org.beobma.bossProjectPlugin.command.BossPatternTestCommand
 import org.beobma.bossProjectPlugin.command.StartGameCommand
 import org.beobma.bossProjectPlugin.manager.BossInteractionDamageListener
 import org.beobma.bossProjectPlugin.manager.GameStartInvitationManager
@@ -19,6 +20,7 @@ class BossProjectPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(gameStartInvitationManager, this)
         server.pluginManager.registerEvents(BossInteractionDamageListener, this)
         getCommand("startgame")?.setExecutor(StartGameCommand(gameStartInvitationManager))
+        getCommand("bosspatterntest")?.setExecutor(BossPatternTestCommand())
 
         loggerInfo("플러그인이 정상적으로 활성화되었습니다.")
     }
