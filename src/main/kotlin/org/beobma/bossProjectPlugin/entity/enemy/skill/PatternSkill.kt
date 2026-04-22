@@ -20,7 +20,7 @@ abstract class PatternSkill {
     open fun inject(enemyData: EnemyData) {
         if (enemyData.status !is EnemyStatus) return
         this.enemyData = enemyData
-        this.enemyStatus = enemyData.status
+        this.enemyStatus = enemyData.status as EnemyStatus
         this.game = enemyData.game
     }
 
