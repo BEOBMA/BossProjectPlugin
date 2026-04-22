@@ -51,7 +51,7 @@ class TrainingBossData(
     }
 
     private fun spawnInteraction(location: Location): Entity {
-        val interaction = Bukkit.worlds.first().spawnEntity(location, EntityType.INTERACTION) as Interaction
+        val interaction = Bukkit.getWorlds().first().spawnEntity(location, EntityType.INTERACTION) as Interaction
         interaction.scoreboardTags.add(interactionTag)
         interaction.interactionWidth = 2.5f
         interaction.interactionHeight = 3.0f

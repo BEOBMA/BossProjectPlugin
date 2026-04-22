@@ -22,7 +22,7 @@ data class BossBattleMapData(
     val deathLimit: Int? = 3,
     val timeLimitMinutes: Int? = 30
 ) {
-    fun world(): World = Bukkit.worlds.first()
+    fun world(): World = Bukkit.getWorlds().first()
 
     fun spawnLocation(): Location {
         return Location(world(), spawnX, spawnY, spawnZ, yaw, pitch)
