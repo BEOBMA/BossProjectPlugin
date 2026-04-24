@@ -6,6 +6,7 @@ import org.beobma.bossProjectPlugin.entity.enemy.BossCombatConstants
 import org.beobma.bossProjectPlugin.entity.enemy.DeathCountMode
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
+import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.SolarSwordAura
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.WrathOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
@@ -35,7 +36,10 @@ class ChosenSerenData(
     override val displayName: String = "선택받은 세렌"
 
     override val passives: List<BossPassive> = listOf(CurseOfSun())
-    override val patternSkills: List<PatternSkill> = listOf(WrathOfSun())
+    override val patternSkills: List<PatternSkill> = listOf(
+        WrathOfSun(),
+        SolarSwordAura()
+    )
     override val mapData: BossBattleMapData = MAP_DATA
 
     override val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
