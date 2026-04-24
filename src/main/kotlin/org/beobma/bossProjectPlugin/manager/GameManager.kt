@@ -32,7 +32,6 @@ import kotlin.reflect.KClass
 import kotlin.random.Random
 
 object GameManager : Listener {
-    private const val STEP_DELAY_TICKS = 10L
     private const val JOB_SELECT_TIMEOUT_TICKS = 20L * 30L
     private const val INVENTORY_SIZE = 54
     private const val PAGE_CAPACITY = 44
@@ -65,10 +64,7 @@ object GameManager : Listener {
 
     fun Game.start() {
         currentGame = this
-
-        runStepDelay {
-            startJobSelection(this@start)
-        }
+        startJobSelection(this@start)
     }
 
     fun getCurrentGame(): Game? = currentGame
@@ -113,12 +109,6 @@ object GameManager : Listener {
         listenerRegistered = true
     }
 
-    private fun runStepDelay(block: () -> Unit) {
-        Bukkit.getScheduler().runTaskLater(BossProjectPlugin.instance, Runnable {
-            block()
-        }, STEP_DELAY_TICKS)
-    }
-
     private fun startJobSelection(game: Game) {
         if (activeSession != null) {
             Bukkit.broadcast(miniMessage.deserialize("<red>이미 직업 선택이 진행 중입니다.</red>"))
@@ -142,27 +132,24 @@ object GameManager : Listener {
     }
 
     private fun finalizeAfterSelection(game: Game) {
-        runStepDelay {
-            Bukkit.getOnlinePlayers().forEach { it.closeInventory() }
-            runStepDelay {
-                val enemyEntry = EnemyRegistry.randomEnemy()
-                val mapData = enemyEntry.mapData
-                val spawnLocation = mapData.spawnLocation()
+        Bukkit.getOnlinePlayers().forEach { it.closeInventory() }
 
-                game.setupMap(mapData)
-                game.setupBoss(enemyEntry.factory(game))
-                game.initializeBattleState()
+        val enemyEntry = EnemyRegistry.randomEnemy()
+        val mapData = enemyEntry.mapData
+        val spawnLocation = mapData.spawnLocation()
 
-                game.playerDatas.forEach { playerData ->
-                    playerData.player.teleport(spawnLocation)
-                }
+        game.setupMap(mapData)
+        game.setupBoss(enemyEntry.factory(game))
+        game.initializeBattleState()
 
-                Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되어 보스전 맵으로 이동합니다.</green>"))
-                Bukkit.broadcast(miniMessage.deserialize("<yellow>선택된 보스: ${game.bossData.displayName}</yellow>"))
-                initializeBossBar(game)
-                startBossLoop(game)
-            }
+        game.playerDatas.forEach { playerData ->
+            playerData.player.teleport(spawnLocation)
         }
+
+        Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되어 보스전 맵으로 이동합니다.</green>"))
+        Bukkit.broadcast(miniMessage.deserialize("<yellow>선택된 보스: ${game.bossData.displayName}</yellow>"))
+        initializeBossBar(game)
+        startBossLoop(game)
     }
 
     fun applyBossInteractionDamage(attacker: Entity, damaged: Entity, finalDamage: Double) {
@@ -269,14 +256,14 @@ object GameManager : Listener {
             val playerData = game.playerDatas.firstOrNull { it.player.uniqueId == player.uniqueId } ?: return
             if (selectedJobsByPlayer[playerData] != null) return
 
-            Bukkit.getScheduler().runTaskLater(BossProjectPlugin.instance, Runnable {
+            Bukkit.getScheduler().runTask(BossProjectPlugin.instance, Runnable {
                 if (activeSession !== this@JobSelectionSession) return@Runnable
                 if (selectedJobsByPlayer[playerData] != null) return@Runnable
                 val page = pagesByPlayer[playerData] ?: 0
                 val inventory = createInventory(playerData, page)
                 inventoriesByPlayer[playerData] = inventory
                 player.openInventory(inventory)
-            }, 1L)
+            })
         }
 
         fun handleClick(player: Player, currentItem: ItemStack?) {
