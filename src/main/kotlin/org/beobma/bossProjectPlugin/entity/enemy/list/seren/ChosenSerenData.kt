@@ -10,7 +10,6 @@ import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.WrathOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.beobma.bossProjectPlugin.game.Game
-import org.bukkit.entity.Entity
 
 class ChosenSerenData(
     private val initGame: Game
@@ -40,17 +39,13 @@ class ChosenSerenData(
     override val mapData: BossBattleMapData = MAP_DATA
 
     override val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
+    override val interactionSummonCommand: String =
+        "/summon interaction 47.0 -35.57565 -76.0 {width:2f,height:3f,Tags:[\"boss_interaction\"]}"
 
-    override val entity: Entity = findExistingBossEntity()
+    override val entity = resolveBossEntity()
 
     init {
         passives.forEach { it.inject(this) }
         patternSkills.forEach { it.inject(this) }
-    }
-
-    private fun findExistingBossEntity(): Entity {
-        val world = mapData.world()
-        return world.entities.firstOrNull { it.scoreboardTags.contains(interactionTag) }
-            ?: error("보스 엔티티 태그 '$interactionTag' 를 가진 엔티티를 월드 '${world.name}' 에서 찾지 못했습니다.")
     }
 }
