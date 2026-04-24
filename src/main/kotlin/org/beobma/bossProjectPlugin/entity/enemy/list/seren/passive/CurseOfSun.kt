@@ -11,10 +11,18 @@ import java.util.UUID
 class CurseOfSun : BossPassive() {
     private val maxGauge = 1000
     private val disabledMillis = 5_000L
+    private val burstFrameDurationTicks = 2
 
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
     private val disabledUntilByPlayer: MutableMap<UUID, Long> = mutableMapOf()
+    private val burstAnimationTickByPlayer: MutableMap<UUID, Int> = mutableMapOf()
+    private val burstFrames: List<String> = listOf(
+        "<red><bold>☀ 태양의 저주 폭발!</bold></red>",
+        "<gold><bold>✦ 태양의 저주 폭발! ✦</bold></gold>",
+        "<yellow><bold>※ 태양의 저주 폭발! ※</bold></yellow>",
+        "<gold><bold>✦ 태양의 저주 폭발! ✦</bold></gold>"
+    )
 
     override val name: String = "태양의 저주"
     override val description: List<String> = listOf(
@@ -29,7 +37,19 @@ class CurseOfSun : BossPassive() {
             .map { it.player }
             .filter { it.isOnline }
             .forEach { player ->
-                player.sendActionBar(buildActionBarText(player.uniqueId))
+                val uuid = player.uniqueId
+                val remainingAnimationTicks = burstAnimationTickByPlayer[uuid] ?: 0
+
+                if (remainingAnimationTicks > 0) {
+                    player.sendActionBar(buildBurstActionBarText(remainingAnimationTicks))
+                    if (remainingAnimationTicks == 1) {
+                        burstAnimationTickByPlayer.remove(uuid)
+                    } else {
+                        burstAnimationTickByPlayer[uuid] = remainingAnimationTicks - 1
+                    }
+                } else {
+                    player.sendActionBar(buildActionBarText(uuid))
+                }
             }
     }
 
@@ -44,6 +64,10 @@ class CurseOfSun : BossPassive() {
         if (next < maxGauge) return
 
         gaugeByPlayer[uuid] = 0
+        val totalAnimationTicks = burstFrames.size * burstFrameDurationTicks
+        burstAnimationTickByPlayer[uuid] = totalAnimationTicks
+        player.sendActionBar(buildBurstActionBarText(totalAnimationTicks))
+
         val disabledUntil = System.currentTimeMillis() + disabledMillis
         disabledUntilByPlayer[uuid] = disabledUntil
     }
@@ -58,5 +82,11 @@ class CurseOfSun : BossPassive() {
         return miniMessage.deserialize(
             "<yellow><bold>[</yellow> $bar <yellow><bold>]</yellow>"
         )
+    }
+
+    private fun buildBurstActionBarText(remainingAnimationTicks: Int): net.kyori.adventure.text.Component {
+        val elapsedTicks = (burstFrames.size * burstFrameDurationTicks) - remainingAnimationTicks
+        val frameIndex = (elapsedTicks / burstFrameDurationTicks).coerceIn(0, burstFrames.lastIndex)
+        return miniMessage.deserialize(burstFrames[frameIndex])
     }
 }
