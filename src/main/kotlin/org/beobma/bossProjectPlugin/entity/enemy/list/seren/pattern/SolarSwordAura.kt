@@ -37,8 +37,8 @@ class SolarSwordAura : PatternSkill() {
 
     override val name: String = "태양의 검기"
     override val description: List<String> = listOf(
-        "<gray>맵 테두리에서 소환된 검기가 5초 동안 반대편 끝까지 휘어지며 돌진한다.",
-        "<gray>웅크리고 있지 않은 대상은 0.5초마다 최대 체력의 20% 피해와 태양의 저주 80을 받는다."
+        "<gray>맵 테두리에서 소환된 검기가 5초 동안 반대편 끝까지 나아간다.",
+        "<gray>피격 시 0.5초마다 최대 체력의 20% 피해를 입고 태양의 저주 수치가 증가한다. 웅크리고 있으면 영향을 받지 않는다."
     )
     override val itemStack: ItemStack = ItemStack(Material.GOLDEN_SWORD)
 
