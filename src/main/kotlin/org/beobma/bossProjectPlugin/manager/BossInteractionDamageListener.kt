@@ -2,6 +2,8 @@ package org.beobma.bossProjectPlugin.manager
 
 import org.beobma.bossProjectPlugin.entity.enemy.BossCombatConstants
 import org.bukkit.Sound
+import org.bukkit.attribute.Attribute
+import org.bukkit.entity.AbstractArrow
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -22,7 +24,21 @@ object BossInteractionDamageListener : Listener {
         GameManager.applyBossInteractionDamage(
             attacker = event.damager,
             damaged = event.entity,
-            damageAmount = event.damage
+            damageAmount = resolveDamage(event)
         )
+    }
+
+    private fun resolveDamage(event: EntityDamageByEntityEvent): Double {
+        val damager = event.damager
+        if (damager is Player) {
+            val attackDamage = damager.getAttribute(Attribute.ATTACK_DAMAGE)?.value ?: 1.0
+            return maxOf(event.finalDamage, attackDamage)
+        }
+
+        if (damager is AbstractArrow) {
+            return maxOf(event.finalDamage, damager.damage)
+        }
+
+        return event.finalDamage
     }
 }
