@@ -53,7 +53,7 @@ class CurseOfSun : BossPassive() {
         val barLength = 20
         val filledLength = ((gauge.toDouble() / maxGauge) * barLength).toInt().coerceIn(0, barLength)
         val emptyLength = barLength - filledLength
-        val bar = "<gold>${"█".repeat(filledLength)}</gold><dark_gray>${"░".repeat(emptyLength)}</dark_gray>"
+        val bar = "<gold>${"░".repeat(filledLength)}</gold><dark_gray>${"░".repeat(emptyLength)}</dark_gray>"
 
         return miniMessage.deserialize(
             "<yellow><bold>[</yellow> $bar <yellow><bold>]</yellow>"
