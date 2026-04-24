@@ -243,7 +243,11 @@ object GameManager : Listener {
     private fun initializeBossBar(game: Game) {
         clearBossBar()
         val created = Bukkit.createBossBar("", BarColor.RED, BarStyle.SOLID)
-        game.playerDatas.forEach { created.addPlayer(it.player) }
+        created.isVisible = true
+        game.playerDatas
+            .map { it.player }
+            .filter { it.isOnline }
+            .forEach { created.addPlayer(it) }
         bossBar = created
         updateBossBar(game)
     }
