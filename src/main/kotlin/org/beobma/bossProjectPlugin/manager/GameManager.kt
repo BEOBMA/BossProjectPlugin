@@ -201,13 +201,13 @@ object GameManager : Listener {
         startBossLoop(game)
     }
 
-    fun applyBossInteractionDamage(attacker: Entity, damaged: Entity, finalDamage: Double) {
+    fun applyBossInteractionDamage(attacker: Entity, damaged: Entity, damageAmount: Double) {
         val game = currentGame ?: return
         if (damaged.uniqueId != game.bossData.entity.uniqueId) return
         if (!isPlayerDamageSource(attacker)) return
-        if (finalDamage <= 0.0) return
+        if (damageAmount <= 0.0) return
 
-        game.bossData.health = (game.bossData.health - finalDamage).coerceAtLeast(0.0)
+        game.bossData.health = (game.bossData.health - damageAmount).coerceAtLeast(0.0)
         updateBossBar(game)
     }
 
