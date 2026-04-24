@@ -48,7 +48,15 @@ class CurseOfSun : BossPassive() {
         disabledUntilByPlayer[uuid] = disabledUntil
     }
 
-    private fun buildActionBarText(uuid: UUID) = miniMessage.deserialize(
-        "<yellow><bold>[</yellow> <white>${gaugeByPlayer[uuid] ?: 0}/${maxGauge}</white> <yellow><bold>]</yellow>"
-    )
+    private fun buildActionBarText(uuid: UUID): net.kyori.adventure.text.Component {
+        val gauge = gaugeByPlayer[uuid] ?: 0
+        val barLength = 20
+        val filledLength = ((gauge.toDouble() / maxGauge) * barLength).toInt().coerceIn(0, barLength)
+        val emptyLength = barLength - filledLength
+        val bar = "<gold>${"█".repeat(filledLength)}</gold><dark_gray>${"░".repeat(emptyLength)}</dark_gray>"
+
+        return miniMessage.deserialize(
+            "<yellow><bold>[</yellow> $bar <yellow><bold>]</yellow>"
+        )
+    }
 }
