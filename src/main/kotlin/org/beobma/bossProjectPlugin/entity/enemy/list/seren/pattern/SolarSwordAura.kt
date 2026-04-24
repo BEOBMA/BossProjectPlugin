@@ -23,7 +23,10 @@ class SolarSwordAura : PatternSkill() {
     private val tickDamageIntervalMillis = 500L
     private val damagePerTickRatio = 0.2
     private val curseGaugeIncrease = 80
-    private val effectHitRadius = 2.5
+    private val effectHitRadius = 0.9
+    private val bladeHalfWidth = 2.5
+    private val bladeStep = 0.5
+    private val bladeDepth = 1.2
     private val worldY = -36.0
 
     private val minX = 32.0
@@ -80,9 +83,10 @@ class SolarSwordAura : PatternSkill() {
                 val progress = livedTick.toDouble() / travelDurationTick.toDouble()
                 val basePosition = start.toVector().add(travelVector.clone().multiply(progress))
                 val center = basePosition.clone()
+                val bladePoints = createBladePoints(center, normal, travelDirection)
 
-                spawnBladeParticles(world, center, normal, travelDirection)
-                applyDamage(world.players, center, hitCooldownByPlayer)
+                spawnBladeParticles(world, bladePoints)
+                applyDamage(world.players, center, bladePoints, hitCooldownByPlayer)
 
                 livedTick++
             }
@@ -92,6 +96,7 @@ class SolarSwordAura : PatternSkill() {
     private fun applyDamage(
         worldPlayers: List<Player>,
         center: Vector,
+        bladePoints: List<Vector>,
         hitCooldownByPlayer: MutableMap<java.util.UUID, Long>
     ) {
         val curseOfSun = enemyData.passives.firstOrNull { it is CurseOfSun } as? CurseOfSun ?: return
@@ -102,7 +107,8 @@ class SolarSwordAura : PatternSkill() {
 
             val playerPos = player.location.toVector()
             if (abs(playerPos.y - center.y) > 2.0) return@forEach
-            if (playerPos.distanceSquared(center) > effectHitRadius * effectHitRadius) return@forEach
+            val minDistanceSquared = bladePoints.minOfOrNull { it.distanceSquared(playerPos) } ?: Double.MAX_VALUE
+            if (minDistanceSquared > effectHitRadius * effectHitRadius) return@forEach
 
             val nowMillis = System.currentTimeMillis()
             val lastHitMillis = hitCooldownByPlayer[player.uniqueId] ?: Long.MIN_VALUE
@@ -115,29 +121,31 @@ class SolarSwordAura : PatternSkill() {
         }
     }
 
-    private fun spawnBladeParticles(world: org.bukkit.World, center: Vector, normal: Vector, travelDirection: Vector) {
-        val halfWidth = 2.5
-        val step = 0.5
-        val depth = 1.2
-        val points = (halfWidth / step).toInt()
-
-        for (i in -points..points) {
-            val lateral = i * step
-            val normalized = lateral / halfWidth
-            val forwardBend = -cos(normalized * (PI / 2.0)) * depth
-
-            val offset = normal.clone().multiply(lateral).add(travelDirection.clone().multiply(forwardBend))
+    private fun spawnBladeParticles(world: org.bukkit.World, bladePoints: List<Vector>) {
+        for (point in bladePoints) {
             world.spawnParticle(
                 Particle.END_ROD,
-                center.x + offset.x,
-                center.y,
-                center.z + offset.z,
+                point.x,
+                point.y,
+                point.z,
                 1,
                 0.0,
                 0.0,
                 0.0,
                 0.0
             )
+        }
+    }
+
+    private fun createBladePoints(center: Vector, normal: Vector, travelDirection: Vector): List<Vector> {
+        val points = (bladeHalfWidth / bladeStep).toInt()
+        return (-points..points).map { index ->
+            val lateral = index * bladeStep
+            val normalized = lateral / bladeHalfWidth
+            val forwardBend = cos(normalized * (PI / 2.0)) * bladeDepth
+            center.clone()
+                .add(normal.clone().multiply(lateral))
+                .add(travelDirection.clone().multiply(forwardBend))
         }
     }
 
