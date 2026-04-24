@@ -33,6 +33,7 @@ class ChosenSerenData(
 
     override val maxHealth: Double = 2000.0
     override var health: Double = maxHealth
+    override val displayName: String = "선택받은 세렌"
 
     override val passives: List<BossPassive> = listOf(CurseOfSun())
     override val patternSkills: List<PatternSkill> = listOf(WrathOfSun())

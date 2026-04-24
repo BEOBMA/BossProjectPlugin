@@ -9,8 +9,13 @@ import org.beobma.bossProjectPlugin.entity.enemy.list.EnemyRegistry
 import org.beobma.bossProjectPlugin.job.Job
 import org.beobma.bossProjectPlugin.job.registry.JobRegistry
 import org.bukkit.Bukkit
+import org.bukkit.boss.BarColor
+import org.bukkit.boss.BarStyle
+import org.bukkit.boss.BossBar
 import org.bukkit.Material
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
+import org.bukkit.entity.Projectile
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
@@ -21,6 +26,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.scheduler.BukkitTask
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.reflect.KClass
 import kotlin.random.Random
@@ -35,6 +41,7 @@ object GameManager : Listener {
     private var currentGame: Game? = null
     private var activeSession: JobSelectionSession? = null
     private var bossLoopTask: BukkitTask? = null
+    private var bossBar: BossBar? = null
     private var patternOnlyTestMode: Boolean = false
 
     private val miniMessage = MiniMessage.miniMessage()
@@ -46,6 +53,7 @@ object GameManager : Listener {
 
     fun startGame(players: Collection<Player>) {
         ensureListenerRegistered()
+        clearBossBar()
 
         val game = Game()
         players.forEach { player ->
@@ -150,10 +158,29 @@ object GameManager : Listener {
                 }
 
                 Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되어 보스전 맵으로 이동합니다.</green>"))
-                Bukkit.broadcast(miniMessage.deserialize("<yellow>선택된 보스: ${game.bossData::class.simpleName}</yellow>"))
+                Bukkit.broadcast(miniMessage.deserialize("<yellow>선택된 보스: ${game.bossData.displayName}</yellow>"))
+                initializeBossBar(game)
                 startBossLoop(game)
             }
         }
+    }
+
+    fun applyBossInteractionDamage(attacker: Entity, damaged: Entity, finalDamage: Double) {
+        val game = currentGame ?: return
+        if (damaged.uniqueId != game.bossData.entity.uniqueId) return
+        if (!isPlayerDamageSource(attacker)) return
+        if (finalDamage <= 0.0) return
+
+        game.bossData.health = (game.bossData.health - finalDamage).coerceAtLeast(0.0)
+        updateBossBar(game)
+    }
+
+    private fun isPlayerDamageSource(entity: Entity): Boolean {
+        if (entity is Player) return true
+        if (entity is Projectile) {
+            return entity.shooter is Player
+        }
+        return false
     }
 
     private fun startBossLoop(game: Game) {
@@ -167,6 +194,7 @@ object GameManager : Listener {
 
                 val status = game.bossData.status as? EnemyStatus
                 status?.let { it.elapsedTicks += 20L }
+                updateBossBar(game)
 
                 if (!patternOnlyTestMode) {
                     game.bossData.passives.forEach { it.onTick() }
@@ -174,6 +202,31 @@ object GameManager : Listener {
                 game.bossData.patternSkills.forEach { it.use() }
             }
         }.runTaskTimer(BossProjectPlugin.instance, 20L, 20L)
+    }
+
+    private fun initializeBossBar(game: Game) {
+        clearBossBar()
+        val created = Bukkit.createBossBar("", BarColor.RED, BarStyle.SOLID)
+        game.playerDatas.forEach { created.addPlayer(it.player) }
+        bossBar = created
+        updateBossBar(game)
+    }
+
+    private fun updateBossBar(game: Game) {
+        val targetBar = bossBar ?: return
+        val progress = if (game.bossData.maxHealth <= 0.0) {
+            0.0
+        } else {
+            (game.bossData.health / game.bossData.maxHealth).coerceIn(0.0, 1.0)
+        }
+        val percent = progress * 100.0
+        targetBar.setTitle("${game.bossData.displayName} ${"%.1f".format(Locale.US, percent)}%")
+        targetBar.progress = progress
+    }
+
+    private fun clearBossBar() {
+        bossBar?.removeAll()
+        bossBar = null
     }
 
 
