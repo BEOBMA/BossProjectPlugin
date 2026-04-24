@@ -4,7 +4,6 @@ import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
-import org.bukkit.Color
 import org.bukkit.Material
 import org.bukkit.Particle
 import org.bukkit.Sound
@@ -16,7 +15,6 @@ import org.bukkit.util.Vector
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.random.Random
 
 class SolarSwordAura : PatternSkill() {
@@ -25,7 +23,7 @@ class SolarSwordAura : PatternSkill() {
     private val tickDamageIntervalMillis = 500L
     private val damagePerTickRatio = 0.2
     private val curseGaugeIncrease = 80
-    private val effectHitRadius = 1.4
+    private val effectHitRadius = 2.5
     private val worldY = -36.0
 
     private val minX = 32.0
@@ -66,7 +64,8 @@ class SolarSwordAura : PatternSkill() {
         lastUsedMillis = System.currentTimeMillis()
         world.playSound(start, Sound.ITEM_TRIDENT_THROW, SoundCategory.MASTER, 0.8f, 1.25f)
 
-        val normal = Vector(-travelVector.z, 0.0, travelVector.x).normalize()
+        val travelDirection = travelVector.clone().normalize()
+        val normal = Vector(-travelDirection.z, 0.0, travelDirection.x).normalize()
         val hitCooldownByPlayer = mutableMapOf<java.util.UUID, Long>()
 
         object : BukkitRunnable() {
@@ -80,10 +79,9 @@ class SolarSwordAura : PatternSkill() {
 
                 val progress = livedTick.toDouble() / travelDurationTick.toDouble()
                 val basePosition = start.toVector().add(travelVector.clone().multiply(progress))
-                val bend = sin(progress * PI) * 3.0
-                val center = basePosition.clone().add(normal.clone().multiply(bend))
+                val center = basePosition.clone()
 
-                spawnBladeParticles(world, center, normal)
+                spawnBladeParticles(world, center, normal, travelDirection)
                 applyDamage(world.players, center, hitCooldownByPlayer)
 
                 livedTick++
@@ -117,22 +115,28 @@ class SolarSwordAura : PatternSkill() {
         }
     }
 
-    private fun spawnBladeParticles(world: org.bukkit.World, center: Vector, normal: Vector) {
-        val dust = Particle.DustOptions(Color.fromRGB(255, 227, 82), 1.5f)
-        for (i in -3..3) {
-            val offset = normal.clone().multiply(i * 0.33)
-            val arcY = cos((i / 3.0) * (PI / 2.0)) * 0.8
+    private fun spawnBladeParticles(world: org.bukkit.World, center: Vector, normal: Vector, travelDirection: Vector) {
+        val halfWidth = 2.5
+        val step = 0.5
+        val depth = 1.2
+        val points = (halfWidth / step).toInt()
+
+        for (i in -points..points) {
+            val lateral = i * step
+            val normalized = lateral / halfWidth
+            val forwardBend = -cos(normalized * (PI / 2.0)) * depth
+
+            val offset = normal.clone().multiply(lateral).add(travelDirection.clone().multiply(forwardBend))
             world.spawnParticle(
-                Particle.DUST,
+                Particle.END_ROD,
                 center.x + offset.x,
-                center.y + arcY,
+                center.y,
                 center.z + offset.z,
                 1,
                 0.0,
                 0.0,
                 0.0,
-                0.0,
-                dust
+                0.0
             )
         }
     }
