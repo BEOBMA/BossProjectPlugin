@@ -11,10 +11,13 @@ import org.bukkit.SoundCategory
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.scheduler.BukkitRunnable
+import org.bukkit.util.BoundingBox
 import org.bukkit.util.Vector
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.random.Random
 
 class SolarSwordAura : PatternSkill() {
@@ -107,8 +110,7 @@ class SolarSwordAura : PatternSkill() {
 
             val playerPos = player.location.toVector()
             if (abs(playerPos.y - center.y) > 2.0) return@forEach
-            val minDistanceSquared = bladePoints.minOfOrNull { it.distanceSquared(playerPos) } ?: Double.MAX_VALUE
-            if (minDistanceSquared > effectHitRadius * effectHitRadius) return@forEach
+            if (!isBladeTouchingPlayer(player.boundingBox, bladePoints, effectHitRadius)) return@forEach
 
             val nowMillis = System.currentTimeMillis()
             val lastHitMillis = hitCooldownByPlayer[player.uniqueId] ?: Long.MIN_VALUE
@@ -119,6 +121,24 @@ class SolarSwordAura : PatternSkill() {
             curseOfSun.increaseGauge(player, curseGaugeIncrease)
             player.world.playSound(player.location, Sound.ITEM_TRIDENT_HIT, SoundCategory.MASTER, 0.35f, 1.6f)
         }
+    }
+
+    private fun isBladeTouchingPlayer(playerBox: BoundingBox, bladePoints: List<Vector>, hitRadius: Double): Boolean {
+        val hitRadiusSquared = hitRadius * hitRadius
+        return bladePoints.any { bladePoint ->
+            distanceSquaredToBox(bladePoint, playerBox) <= hitRadiusSquared
+        }
+    }
+
+    private fun distanceSquaredToBox(point: Vector, box: BoundingBox): Double {
+        val closestX = point.x.coerceIn(min(box.minX, box.maxX), max(box.minX, box.maxX))
+        val closestY = point.y.coerceIn(min(box.minY, box.maxY), max(box.minY, box.maxY))
+        val closestZ = point.z.coerceIn(min(box.minZ, box.maxZ), max(box.minZ, box.maxZ))
+
+        val dx = point.x - closestX
+        val dy = point.y - closestY
+        val dz = point.z - closestZ
+        return dx * dx + dy * dy + dz * dz
     }
 
     private fun spawnBladeParticles(world: org.bukkit.World, bladePoints: List<Vector>) {
