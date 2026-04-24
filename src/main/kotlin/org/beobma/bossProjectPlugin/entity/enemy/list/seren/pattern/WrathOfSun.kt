@@ -58,12 +58,13 @@ class WrathOfSun : PatternSkill() {
         val picked = readyFloors.shuffled().take(min(strikesPerCycle, readyFloors.size))
         picked.forEachIndexed { index, floorState ->
             floorState.nextAvailableTick = nowTick + cooldownTick
-            playFloorAnimation(floorState.area)
-
-            val delay = strikeDelayTick + (index * strikeGapTick)
+            val animationDelay = index * strikeGapTick
             BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
-                triggerStrike(floorState.area)
-            }, delay)
+                playFloorAnimation(floorState.area)
+                BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
+                    triggerStrike(floorState.area)
+                }, strikeDelayTick)
+            }, animationDelay)
         }
     }
 
