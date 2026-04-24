@@ -6,6 +6,8 @@ import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.Sound
+import org.bukkit.SoundCategory
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.inventory.ItemStack
@@ -69,6 +71,7 @@ class WrathOfSun : PatternSkill() {
         val world = enemyData.mapData.world()
         if (world.uid != area.worldUid) return
 
+        world.playSound(area.center(world), Sound.ITEM_TRIDENT_THROW, SoundCategory.MASTER, 0.5f, 1f)
         world.players
             .asSequence()
             .filter { player ->
@@ -82,6 +85,7 @@ class WrathOfSun : PatternSkill() {
 
                 val curseOfSun = enemyData.passives.firstOrNull { it is CurseOfSun } as? CurseOfSun ?: return@forEach
                 curseOfSun.increaseGauge(player, curseGaugeIncrease)
+                world.playSound(area.center(world), Sound.ITEM_TRIDENT_HIT, SoundCategory.MASTER, 0.5f, 1f)
             }
     }
 
@@ -150,5 +154,14 @@ class WrathOfSun : PatternSkill() {
         val minZ: Int,
         val maxZ: Int,
         val floorY: Int
-    )
+    ) {
+        fun center(world: org.bukkit.World): org.bukkit.Location {
+            return org.bukkit.Location(
+                world,
+                (minX + maxX + 1) / 2.0,
+                floorY + 1.0,
+                (minZ + maxZ + 1) / 2.0
+            )
+        }
+    }
 }
