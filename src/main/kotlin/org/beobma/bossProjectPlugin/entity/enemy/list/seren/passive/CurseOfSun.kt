@@ -23,13 +23,23 @@ class CurseOfSun : BossPassive() {
     )
     override val itemStack: ItemStack = ItemStack(Material.TOTEM_OF_UNDYING)
 
+    override fun onTick() {
+        game.playerDatas
+            .asSequence()
+            .map { it.player }
+            .filter { it.isOnline }
+            .forEach { player ->
+                player.sendActionBar(buildActionBarText(player.uniqueId))
+            }
+    }
+
     fun increaseGauge(player: Player, amount: Int) {
         val uuid = player.uniqueId
         val current = gaugeByPlayer[uuid] ?: 0
         val next = (current + amount).coerceIn(0, maxGauge)
         gaugeByPlayer[uuid] = next
 
-        player.sendActionBar(miniMessage.deserialize("<yellow>[태양의 저주]</yellow> <white>${next}/${maxGauge}</white>"))
+        player.sendActionBar(buildActionBarText(uuid))
 
         if (next < maxGauge) return
 
@@ -39,4 +49,8 @@ class CurseOfSun : BossPassive() {
 
         player.sendMessage(miniMessage.deserialize("<red><bold>태양의 저주 발동!</bold></red> <gray>5초간 행동/회복 불가 상태입니다.</gray>"))
     }
+
+    private fun buildActionBarText(uuid: UUID) = miniMessage.deserialize(
+        "<yellow>[태양의 저주]</yellow> <white>${gaugeByPlayer[uuid] ?: 0}/${maxGauge}</white>"
+    )
 }
