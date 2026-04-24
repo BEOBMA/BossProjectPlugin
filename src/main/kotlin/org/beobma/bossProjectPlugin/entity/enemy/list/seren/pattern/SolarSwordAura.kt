@@ -4,7 +4,6 @@ import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
-import org.bukkit.Color
 import org.bukkit.Material
 import org.bukkit.Particle
 import org.bukkit.Sound
@@ -16,7 +15,6 @@ import org.bukkit.util.Vector
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
-import kotlin.math.sin
 import kotlin.random.Random
 
 class SolarSwordAura : PatternSkill() {
@@ -25,7 +23,10 @@ class SolarSwordAura : PatternSkill() {
     private val tickDamageIntervalMillis = 500L
     private val damagePerTickRatio = 0.2
     private val curseGaugeIncrease = 80
-    private val effectHitRadius = 1.4
+    private val effectHitRadius = 0.9
+    private val bladeHalfWidth = 2.5
+    private val bladeStep = 0.5
+    private val bladeDepth = 1.2
     private val worldY = -36.0
 
     private val minX = 32.0
@@ -66,7 +67,8 @@ class SolarSwordAura : PatternSkill() {
         lastUsedMillis = System.currentTimeMillis()
         world.playSound(start, Sound.ITEM_TRIDENT_THROW, SoundCategory.MASTER, 0.8f, 1.25f)
 
-        val normal = Vector(-travelVector.z, 0.0, travelVector.x).normalize()
+        val travelDirection = travelVector.clone().normalize()
+        val normal = Vector(-travelDirection.z, 0.0, travelDirection.x).normalize()
         val hitCooldownByPlayer = mutableMapOf<java.util.UUID, Long>()
 
         object : BukkitRunnable() {
@@ -80,11 +82,11 @@ class SolarSwordAura : PatternSkill() {
 
                 val progress = livedTick.toDouble() / travelDurationTick.toDouble()
                 val basePosition = start.toVector().add(travelVector.clone().multiply(progress))
-                val bend = sin(progress * PI) * 3.0
-                val center = basePosition.clone().add(normal.clone().multiply(bend))
+                val center = basePosition.clone()
+                val bladePoints = createBladePoints(center, normal, travelDirection)
 
-                spawnBladeParticles(world, center, normal)
-                applyDamage(world.players, center, hitCooldownByPlayer)
+                spawnBladeParticles(world, bladePoints)
+                applyDamage(world.players, center, bladePoints, hitCooldownByPlayer)
 
                 livedTick++
             }
@@ -94,6 +96,7 @@ class SolarSwordAura : PatternSkill() {
     private fun applyDamage(
         worldPlayers: List<Player>,
         center: Vector,
+        bladePoints: List<Vector>,
         hitCooldownByPlayer: MutableMap<java.util.UUID, Long>
     ) {
         val curseOfSun = enemyData.passives.firstOrNull { it is CurseOfSun } as? CurseOfSun ?: return
@@ -104,7 +107,8 @@ class SolarSwordAura : PatternSkill() {
 
             val playerPos = player.location.toVector()
             if (abs(playerPos.y - center.y) > 2.0) return@forEach
-            if (playerPos.distanceSquared(center) > effectHitRadius * effectHitRadius) return@forEach
+            val minDistanceSquared = bladePoints.minOfOrNull { it.distanceSquared(playerPos) } ?: Double.MAX_VALUE
+            if (minDistanceSquared > effectHitRadius * effectHitRadius) return@forEach
 
             val nowMillis = System.currentTimeMillis()
             val lastHitMillis = hitCooldownByPlayer[player.uniqueId] ?: Long.MIN_VALUE
@@ -117,23 +121,31 @@ class SolarSwordAura : PatternSkill() {
         }
     }
 
-    private fun spawnBladeParticles(world: org.bukkit.World, center: Vector, normal: Vector) {
-        val dust = Particle.DustOptions(Color.fromRGB(255, 227, 82), 1.5f)
-        for (i in -3..3) {
-            val offset = normal.clone().multiply(i * 0.33)
-            val arcY = cos((i / 3.0) * (PI / 2.0)) * 0.8
+    private fun spawnBladeParticles(world: org.bukkit.World, bladePoints: List<Vector>) {
+        for (point in bladePoints) {
             world.spawnParticle(
-                Particle.DUST,
-                center.x + offset.x,
-                center.y + arcY,
-                center.z + offset.z,
+                Particle.END_ROD,
+                point.x,
+                point.y,
+                point.z,
                 1,
                 0.0,
                 0.0,
                 0.0,
-                0.0,
-                dust
+                0.0
             )
+        }
+    }
+
+    private fun createBladePoints(center: Vector, normal: Vector, travelDirection: Vector): List<Vector> {
+        val points = (bladeHalfWidth / bladeStep).toInt()
+        return (-points..points).map { index ->
+            val lateral = index * bladeStep
+            val normalized = lateral / bladeHalfWidth
+            val forwardBend = cos(normalized * (PI / 2.0)) * bladeDepth
+            center.clone()
+                .add(normal.clone().multiply(lateral))
+                .add(travelDirection.clone().multiply(forwardBend))
         }
     }
 
