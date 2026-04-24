@@ -46,11 +46,9 @@ class CurseOfSun : BossPassive() {
         gaugeByPlayer[uuid] = 0
         val disabledUntil = System.currentTimeMillis() + disabledMillis
         disabledUntilByPlayer[uuid] = disabledUntil
-
-        player.sendMessage(miniMessage.deserialize("<red><bold>태양의 저주 발동!</bold></red> <gray>5초간 행동/회복 불가 상태입니다.</gray>"))
     }
 
     private fun buildActionBarText(uuid: UUID) = miniMessage.deserialize(
-        "<yellow>[태양의 저주]</yellow> <white>${gaugeByPlayer[uuid] ?: 0}/${maxGauge}</white>"
+        "<yellow><bold>[</yellow> <white>${gaugeByPlayer[uuid] ?: 0}/${maxGauge}</white> <yellow><bold>]</yellow>"
     )
 }
