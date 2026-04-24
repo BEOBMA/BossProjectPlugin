@@ -9,6 +9,9 @@ commands:
   startgame:
     description: OP 플레이어가 게임 시작을 요청합니다.
     usage: /startgame
+  endgame:
+    description: OP가 진행 중인 게임을 강제 종료합니다.
+    usage: /endgame [종료사유]
   bosspatterntest:
     description: 보스 패시브를 제외하고 패턴 스킬만 테스트합니다.
     usage: /bosspatterntest [on|off|status]
