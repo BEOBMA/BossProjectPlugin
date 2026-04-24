@@ -13,6 +13,8 @@ class Game {
 
     lateinit var bossData: EnemyData
         private set
+    val isBossInitialized: Boolean
+        get() = this::bossData.isInitialized
 
     private val deathCountByPlayer: MutableMap<UUID, Int> = mutableMapOf()
     var sharedDeathCount: Int = 0

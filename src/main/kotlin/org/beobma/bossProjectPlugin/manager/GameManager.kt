@@ -20,6 +20,8 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.player.PlayerKickEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
@@ -62,6 +64,35 @@ object GameManager : Listener {
         game.start()
     }
 
+    fun terminateCurrentGame(reason: String, broadcast: Boolean = true): Boolean {
+        val game = currentGame ?: return false
+
+        activeSession?.terminate()
+        activeSession = null
+
+        bossLoopTask?.cancel()
+        bossLoopTask = null
+        clearBossBar()
+
+        if (game.isBossInitialized && game.bossData.entity.isValid) {
+            game.bossData.entity.remove()
+        }
+
+        Bukkit.getOnlinePlayers().forEach { onlinePlayer ->
+            val holder = onlinePlayer.openInventory.topInventory.holder as? JobSelectionHolder
+            if (holder?.session != null) {
+                onlinePlayer.closeInventory()
+            }
+        }
+
+        currentGame = null
+
+        if (broadcast) {
+            Bukkit.broadcast(miniMessage.deserialize("<red>진행 중인 게임이 종료되었습니다: $reason</red>"))
+        }
+        return true
+    }
+
     fun Game.start() {
         currentGame = this
         startJobSelection(this@start)
@@ -100,6 +131,24 @@ object GameManager : Listener {
 
         val player = event.player as? Player ?: return
         session.onClose(player)
+    }
+
+    @EventHandler
+    fun onPlayerQuit(event: PlayerQuitEvent) {
+        val game = currentGame ?: return
+        val leaver = game.playerDatas.any { it.player.uniqueId == event.player.uniqueId }
+        if (!leaver) return
+
+        terminateCurrentGame("${event.player.name} 님이 서버를 떠났습니다.")
+    }
+
+    @EventHandler
+    fun onPlayerKick(event: PlayerKickEvent) {
+        val game = currentGame ?: return
+        val leaver = game.playerDatas.any { it.player.uniqueId == event.player.uniqueId }
+        if (!leaver) return
+
+        terminateCurrentGame("${event.player.name} 님이 서버에서 퇴장되었습니다.")
     }
 
     private fun ensureListenerRegistered() {
@@ -348,6 +397,10 @@ object GameManager : Listener {
             activeSession = null
 
             finalizeAfterSelection(game)
+        }
+
+        fun terminate() {
+            timeoutTask.cancel()
         }
 
         private fun openPage(playerData: PlayerData, page: Int) {
