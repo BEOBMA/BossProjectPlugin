@@ -4,6 +4,7 @@ import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
+import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.entity.EntityDamageByEntityEvent
@@ -19,6 +20,10 @@ class WrathOfSun : PatternSkill() {
     private val strikesPerCycle = 3
     private val curseGaugeIncrease = 120
     private val floorStates: MutableList<FloorState> = mutableListOf()
+    private val effectStartX = 61
+    private val effectStartZ = -62
+    private val effectCellSize = 5
+    private val effectGridSize = 6
 
     override val name: String = "태양의 분노"
     override val description: List<String> = listOf(
@@ -51,6 +56,7 @@ class WrathOfSun : PatternSkill() {
         val picked = readyFloors.shuffled().take(min(strikesPerCycle, readyFloors.size))
         picked.forEachIndexed { index, floorState ->
             floorState.nextAvailableTick = nowTick + cooldownTick
+            playFloorAnimation(floorState.area)
 
             val delay = strikeDelayTick + (index * strikeGapTick)
             BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
@@ -78,6 +84,22 @@ class WrathOfSun : PatternSkill() {
                 curseOfSun.increaseGauge(player, curseGaugeIncrease)
             }
     }
+
+    private fun playFloorAnimation(area: FloorArea) {
+        val functionNumber = resolveFunctionNumber(area) ?: return
+        Bukkit.dispatchCommand(
+            Bukkit.getConsoleSender(),
+            "function wrath_of_sun_${functionNumber}:a/default/play_anim"
+        )
+    }
+
+    private fun resolveFunctionNumber(area: FloorArea): Int? {
+        val column = (effectStartX - area.maxX) / effectCellSize
+        val row = (effectStartZ - area.maxZ) / effectCellSize
+        if (column !in 0 until effectGridSize || row !in 0 until effectGridSize) return null
+        return row * effectGridSize + column + 1
+    }
+
 
     private fun buildFloorAreas(): List<FloorArea> {
         val world = enemyData.mapData.world()
