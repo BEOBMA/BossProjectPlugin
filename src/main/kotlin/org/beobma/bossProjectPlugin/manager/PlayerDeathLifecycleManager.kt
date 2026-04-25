@@ -13,6 +13,7 @@ import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
+import org.bukkit.event.player.PlayerToggleSneakEvent
 import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 
@@ -82,6 +83,15 @@ object PlayerDeathLifecycleManager : Listener {
         respawnPlayer(player)
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onSneakForInstantRespawn(event: PlayerToggleSneakEvent) {
+        if (!event.isSneaking) return
+        val player = event.player
+        if (!pendingRespawnLocations.containsKey(player.uniqueId)) return
+        event.isCancelled = true
+        respawnPlayer(player)
+    }
+
     @EventHandler
     fun onQuit(event: PlayerQuitEvent) {
         clearPlayerState(event.player.uniqueId)
@@ -108,7 +118,7 @@ object PlayerDeathLifecycleManager : Listener {
             val remainText = remainingAfterDeath?.let { "<gray>(남은 데스카운트: $it)</gray>" } ?: ""
             player.sendMessage(
                 miniMessage.deserialize(
-                    "<yellow>30초 후 자동으로 부활합니다. <aqua>F</aqua> 키를 눌러 즉시 부활할 수 있습니다.</yellow> $remainText"
+                    "<yellow>30초 후 자동으로 부활합니다. <aqua>웅크리기(Shift)</aqua> 또는 <aqua>F</aqua> 키로 즉시 부활할 수 있습니다.</yellow> $remainText"
                 )
             )
             return
