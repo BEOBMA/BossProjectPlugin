@@ -41,6 +41,9 @@ class CurseOfSun : BossPassive(), Listener {
     private val phase2TransitionParticleDurationTicks = 20L * 5L
     private val phase2TransitionParticleIntervalTicks = 2L
     private val phase2TransitionParticleCount = 10_000
+    private val phase2TransitionMarkerCenterX = 65.0
+    private val phase2TransitionMarkerCenterY = -24.0
+    private val phase2TransitionMarkerCenterZ = -113.0
     private val mapShiftDistanceX = 35.0
 
     private val defaultNoonTicks = 20L * 120L
@@ -333,10 +336,11 @@ class CurseOfSun : BossPassive(), Listener {
 
         val totalSteps = (phase2TransitionParticleDurationTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
         var step = 0
-        val center = Location(world, phase2GlobalCenterX, phase2GlobalCenterY, phase2GlobalCenterZ)
+        val center = Location(world, phase2TransitionMarkerCenterX, phase2TransitionMarkerCenterY, phase2TransitionMarkerCenterZ)
         val spreadX = (phase2GlobalMaxX - phase2GlobalMinX) / 2.0
-        val spreadY = (phase2MaxY - phase2MinY) / 2.0 + 3.0
+        val spreadY = 13.0
         val spreadZ = (phase2MaxZ - phase2MinZ) / 2.0
+        val markerBlockData = Material.WHITE_CONCRETE.createBlockData()
 
         phase2BlindnessTask = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
             BossProjectPlugin.instance,
@@ -347,7 +351,7 @@ class CurseOfSun : BossPassive(), Listener {
                     return@Runnable
                 }
 
-                world.spawnParticle(Particle.END_ROD, center, phase2TransitionParticleCount, spreadX, spreadY, spreadZ, 0.0)
+                world.spawnParticle(Particle.BLOCK_MARKER, center, phase2TransitionParticleCount, spreadX, spreadY, spreadZ, 0.0, markerBlockData)
 
                 step++
                 if (step > totalSteps) {
