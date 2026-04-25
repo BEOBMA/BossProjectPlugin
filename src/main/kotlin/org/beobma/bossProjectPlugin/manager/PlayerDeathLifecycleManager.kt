@@ -48,7 +48,7 @@ object PlayerDeathLifecycleManager : Listener {
 
     fun canBeTargetedByPattern(player: Player): Boolean {
         if (!player.isOnline || player.isDead) return false
-        if (player.gameMode != GameMode.ADVENTURE) return false
+        if (player.gameMode == GameMode.SPECTATOR) return false
         return !isRespawnInvulnerable(player)
     }
 
