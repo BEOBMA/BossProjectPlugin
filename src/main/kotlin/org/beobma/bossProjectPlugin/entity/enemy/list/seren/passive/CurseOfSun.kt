@@ -42,6 +42,8 @@ class CurseOfSun : BossPassive(), Listener {
     private val phase2TransitionParticleIntervalTicks = 2L
     private val phase2TransitionPostShiftMaintainTicks = 10L // 0.5s
     private val phase2TransitionParticleCountPerPlayer = 450
+    private val safeZoneParticleHeightOffset = 0.2
+    private val safeZoneParticleSpacing = 1.0
     private val mapShiftDistanceX = 35.0
 
     private val defaultNoonTicks = 20L * 5L //20L * 120L
@@ -291,6 +293,7 @@ class CurseOfSun : BossPassive(), Listener {
         world.players.forEach { player ->
             player.sendMessage(miniMessage.deserialize("<yellow>[시간 전환]</yellow> <green>${safeZone.displayName}</green><gray>이(가) 안전지대입니다. 3초 안에 이동하세요.</gray>"))
         }
+        spawnSafeZoneParticles(world, safeZone)
 
         BossProjectPlugin.instance.server.scheduler.runTaskLater(
             BossProjectPlugin.instance,
@@ -319,6 +322,22 @@ class CurseOfSun : BossPassive(), Listener {
             },
             preShiftWarningTicks
         )
+    }
+
+    private fun spawnSafeZoneParticles(world: org.bukkit.World, safeZone: SafeZone) {
+        safeZone.forEachPoint(spacing = safeZoneParticleSpacing) { x, z ->
+            world.spawnParticle(
+                Particle.END_ROD,
+                x + 0.5,
+                safeZone.floorY + safeZoneParticleHeightOffset,
+                z + 0.5,
+                1,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            )
+        }
     }
 
     private fun startPhase2TransitionParticle(world: org.bukkit.World, onCompleted: () -> Unit) {
@@ -512,6 +531,22 @@ class CurseOfSun : BossPassive(), Listener {
                 (minY + maxY) / 2.0,
                 (minZ + maxZ) / 2.0
             )
+        }
+
+        val floorY: Double
+            get() = minY
+
+        fun forEachPoint(spacing: Double, consumer: (x: Double, z: Double) -> Unit) {
+            val step = spacing.coerceAtLeast(0.1)
+            var x = minX
+            while (x <= maxX) {
+                var z = minZ
+                while (z <= maxZ) {
+                    consumer(x, z)
+                    z += step
+                }
+                x += step
+            }
         }
     }
 }
