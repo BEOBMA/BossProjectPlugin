@@ -38,6 +38,8 @@ class CurseOfSun : BossPassive(), Listener {
 
     private val phase2GaugeIntervalTicks = 22L // 1.1s ~= 1.08s
     private val preShiftWarningTicks = 20L * 3L
+    private val phase2BlindnessDurationTicks = 20L * 5L
+    private val phase2BlindnessIntervalTicks = 2L
     private val mapShiftDistanceX = 35.0
 
     private val defaultNoonTicks = 20L * 120L
@@ -63,6 +65,7 @@ class CurseOfSun : BossPassive(), Listener {
     private var timeBar: BossBar? = null
     private var phase2GaugeTask: BukkitTask? = null
     private var phase2TransitionTask: BukkitTask? = null
+    private var phase2BlindnessTask: BukkitTask? = null
     private var phase2CycleInitialized = false
 
     private var currentTimeZone: TimeZoneState = TimeZoneState.NOON
@@ -193,6 +196,9 @@ class CurseOfSun : BossPassive(), Listener {
         phase2TransitionTask?.cancel()
         phase2TransitionTask = null
 
+        phase2BlindnessTask?.cancel()
+        phase2BlindnessTask = null
+
         timeBar?.removeAll()
         timeBar = null
 
@@ -315,16 +321,57 @@ class CurseOfSun : BossPassive(), Listener {
                         }
                     }
 
-                for (radiusStep in 1..8) {
-                    val radius = radiusStep * 2.5
-                    world.spawnParticle(Particle.END_ROD, center, 100, radius, 0.7, radius, 0.0)
-                }
-
                 world.players
                     .filter { it.isOnline }
                     .forEach { shiftPlayerToNextLane(it) }
+
+                startPhase2BlindnessParticle(world, center)
             },
             preShiftWarningTicks
+        )
+    }
+
+    private fun startPhase2BlindnessParticle(world: org.bukkit.World, center: Location) {
+        phase2BlindnessTask?.cancel()
+
+        val totalSteps = (phase2BlindnessDurationTicks / phase2BlindnessIntervalTicks).toInt().coerceAtLeast(1)
+        var step = 0
+
+        phase2BlindnessTask = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
+            BossProjectPlugin.instance,
+            Runnable {
+                if (!isPhase2StillRunning()) {
+                    phase2BlindnessTask?.cancel()
+                    phase2BlindnessTask = null
+                    return@Runnable
+                }
+
+                val progress = step.toDouble() / totalSteps.toDouble()
+                val radius = 3.0 + (progress * 30.0)
+                val verticalSpread = 1.0 + (progress * 5.0)
+                val particleCount = (220 + (progress * 380.0)).toInt()
+
+                for (yStep in -3..3) {
+                    val yOffset = yStep * 1.1
+                    world.spawnParticle(
+                        Particle.END_ROD,
+                        center.clone().add(0.0, yOffset, 0.0),
+                        particleCount,
+                        radius,
+                        verticalSpread,
+                        radius,
+                        0.0
+                    )
+                }
+
+                step++
+                if (step > totalSteps) {
+                    phase2BlindnessTask?.cancel()
+                    phase2BlindnessTask = null
+                }
+            },
+            0L,
+            phase2BlindnessIntervalTicks
         )
     }
 
