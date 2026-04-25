@@ -14,7 +14,6 @@ import org.bukkit.scheduler.BukkitRunnable
 import org.bukkit.util.BoundingBox
 import org.bukkit.util.Vector
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -108,9 +107,9 @@ class SolarSwordAura : PatternSkill() {
             if (!player.isOnline) return@forEach
             if (player.isSneaking) return@forEach
 
-            val playerPos = player.location.toVector()
-            if (abs(playerPos.y - center.y) > 2.0) return@forEach
-            if (!isBladeTouchingPlayer(player.boundingBox, bladePoints, effectHitRadius)) return@forEach
+            val playerBox = player.boundingBox
+            if (center.y < playerBox.minY - 2.0 || center.y > playerBox.maxY + 2.0) return@forEach
+            if (!isBladeTouchingPlayer(playerBox, bladePoints, effectHitRadius)) return@forEach
 
             val nowMillis = System.currentTimeMillis()
             val lastHitMillis = hitCooldownByPlayer[player.uniqueId] ?: Long.MIN_VALUE
@@ -126,19 +125,17 @@ class SolarSwordAura : PatternSkill() {
     private fun isBladeTouchingPlayer(playerBox: BoundingBox, bladePoints: List<Vector>, hitRadius: Double): Boolean {
         val hitRadiusSquared = hitRadius * hitRadius
         return bladePoints.any { bladePoint ->
-            distanceSquaredToBox(bladePoint, playerBox) <= hitRadiusSquared
+            distanceSquaredToBoxXZ(bladePoint, playerBox) <= hitRadiusSquared
         }
     }
 
-    private fun distanceSquaredToBox(point: Vector, box: BoundingBox): Double {
+    private fun distanceSquaredToBoxXZ(point: Vector, box: BoundingBox): Double {
         val closestX = point.x.coerceIn(min(box.minX, box.maxX), max(box.minX, box.maxX))
-        val closestY = point.y.coerceIn(min(box.minY, box.maxY), max(box.minY, box.maxY))
         val closestZ = point.z.coerceIn(min(box.minZ, box.maxZ), max(box.minZ, box.maxZ))
 
         val dx = point.x - closestX
-        val dy = point.y - closestY
         val dz = point.z - closestZ
-        return dx * dx + dy * dy + dz * dz
+        return dx * dx + dz * dz
     }
 
     private fun spawnBladeParticles(world: org.bukkit.World, bladePoints: List<Vector>) {
