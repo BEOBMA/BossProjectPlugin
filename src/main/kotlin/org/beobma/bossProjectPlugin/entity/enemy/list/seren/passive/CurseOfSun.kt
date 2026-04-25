@@ -38,8 +38,9 @@ class CurseOfSun : BossPassive(), Listener {
 
     private val phase2GaugeIntervalTicks = 22L // 1.1s ~= 1.08s
     private val preShiftWarningTicks = 20L * 3L
-    private val phase2BlindnessDurationTicks = 20L * 5L
-    private val phase2BlindnessIntervalTicks = 2L
+    private val phase2TransitionParticleDurationTicks = 20L * 5L
+    private val phase2TransitionParticleIntervalTicks = 2L
+    private val phase2TransitionParticleCount = 10_000
     private val mapShiftDistanceX = 35.0
 
     private val defaultNoonTicks = 20L * 120L
@@ -57,6 +58,11 @@ class CurseOfSun : BossPassive(), Listener {
     private val phase2MinZ = -127.5
     private val phase2MaxZ = -98.5
     private val laneCount = 4
+    private val phase2GlobalMinX = phase2MinX
+    private val phase2GlobalMaxX = phase2MaxX + mapShiftDistanceX * (laneCount - 1)
+    private val phase2GlobalCenterX = (phase2GlobalMinX + phase2GlobalMaxX) / 2.0
+    private val phase2GlobalCenterY = -31.0
+    private val phase2GlobalCenterZ = (phase2MinZ + phase2MaxZ) / 2.0
 
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
@@ -219,25 +225,13 @@ class CurseOfSun : BossPassive(), Listener {
     private fun scheduleNextZoneTransition() {
         phase2TransitionTask?.cancel()
 
-        val warningDelay = (currentZoneDurationTicks - preShiftWarningTicks).coerceAtLeast(0L)
-        val transitionDelay = currentZoneDurationTicks
-
-        BossProjectPlugin.instance.server.scheduler.runTaskLater(
+        phase2TransitionTask = BossProjectPlugin.instance.server.scheduler.runTaskLater(
             BossProjectPlugin.instance,
             Runnable {
                 if (!isPhase2StillRunning()) return@Runnable
                 executePreShiftEvent()
             },
-            warningDelay
-        )
-
-        phase2TransitionTask = BossProjectPlugin.instance.server.scheduler.runTaskLater(
-            BossProjectPlugin.instance,
-            Runnable {
-                if (!isPhase2StillRunning()) return@Runnable
-                onTimeZoneEnded()
-            },
-            transitionDelay
+            currentZoneDurationTicks
         )
     }
 
@@ -303,7 +297,6 @@ class CurseOfSun : BossPassive(), Listener {
             player.sendMessage(miniMessage.deserialize("<yellow>[시간 전환]</yellow> <green>${safeZone.displayName}</green><gray>이(가) 안전지대입니다. 3초 안에 이동하세요.</gray>"))
         }
 
-        val center = Location(world, 12.5, -31.0, -113.0)
         world.spawnParticle(Particle.END_ROD, safeZone.center(world), 80, 1.2, 0.8, 1.2, 0.0)
 
         BossProjectPlugin.instance.server.scheduler.runTaskLater(
@@ -311,31 +304,39 @@ class CurseOfSun : BossPassive(), Listener {
             Runnable {
                 if (!isPhase2StillRunning()) return@Runnable
 
-                world.players
-                    .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
-                    .forEach { player ->
-                        if (!safeZone.contains(player.location)) {
-                            game.consumeDeathIfAvailable(player.uniqueId)
-                            player.level = game.remainingDeaths(player.uniqueId) ?: player.level
-                            player.sendMessage(miniMessage.deserialize("<red>안전지대 밖에 있어 데스 카운트를 1 소모했습니다.</red>"))
+                startPhase2TransitionParticle(world) {
+                    if (!isPhase2StillRunning()) return@startPhase2TransitionParticle
+
+                    world.players
+                        .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
+                        .forEach { player ->
+                            if (!safeZone.contains(player.location)) {
+                                game.consumeDeathIfAvailable(player.uniqueId)
+                                player.level = game.remainingDeaths(player.uniqueId) ?: player.level
+                                player.sendMessage(miniMessage.deserialize("<red>안전지대 밖에 있어 데스 카운트를 1 소모했습니다.</red>"))
+                            }
                         }
-                    }
 
-                world.players
-                    .filter { it.isOnline }
-                    .forEach { shiftPlayerToNextLane(it) }
+                    world.players
+                        .filter { it.isOnline }
+                        .forEach { shiftPlayerToNextLane(it) }
 
-                startPhase2BlindnessParticle(world, center)
+                    onTimeZoneEnded()
+                }
             },
             preShiftWarningTicks
         )
     }
 
-    private fun startPhase2BlindnessParticle(world: org.bukkit.World, center: Location) {
+    private fun startPhase2TransitionParticle(world: org.bukkit.World, onCompleted: () -> Unit) {
         phase2BlindnessTask?.cancel()
 
-        val totalSteps = (phase2BlindnessDurationTicks / phase2BlindnessIntervalTicks).toInt().coerceAtLeast(1)
+        val totalSteps = (phase2TransitionParticleDurationTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
         var step = 0
+        val center = Location(world, phase2GlobalCenterX, phase2GlobalCenterY, phase2GlobalCenterZ)
+        val spreadX = (phase2GlobalMaxX - phase2GlobalMinX) / 2.0
+        val spreadY = (phase2MaxY - phase2MinY) / 2.0 + 3.0
+        val spreadZ = (phase2MaxZ - phase2MinZ) / 2.0
 
         phase2BlindnessTask = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
             BossProjectPlugin.instance,
@@ -346,32 +347,17 @@ class CurseOfSun : BossPassive(), Listener {
                     return@Runnable
                 }
 
-                val progress = step.toDouble() / totalSteps.toDouble()
-                val radius = 3.0 + (progress * 30.0)
-                val verticalSpread = 1.0 + (progress * 5.0)
-                val particleCount = (220 + (progress * 380.0)).toInt()
-
-                for (yStep in -3..3) {
-                    val yOffset = yStep * 1.1
-                    world.spawnParticle(
-                        Particle.END_ROD,
-                        center.clone().add(0.0, yOffset, 0.0),
-                        particleCount,
-                        radius,
-                        verticalSpread,
-                        radius,
-                        0.0
-                    )
-                }
+                world.spawnParticle(Particle.END_ROD, center, phase2TransitionParticleCount, spreadX, spreadY, spreadZ, 0.0)
 
                 step++
                 if (step > totalSteps) {
                     phase2BlindnessTask?.cancel()
                     phase2BlindnessTask = null
+                    onCompleted()
                 }
             },
             0L,
-            phase2BlindnessIntervalTicks
+            phase2TransitionParticleIntervalTicks
         )
     }
 
