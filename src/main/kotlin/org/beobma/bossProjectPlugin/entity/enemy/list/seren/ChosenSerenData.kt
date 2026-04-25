@@ -14,7 +14,8 @@ import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.beobma.bossProjectPlugin.game.Game
 
 class ChosenSerenData(
-    private val initGame: Game
+    private val initGame: Game,
+    override val phase: Int = 1
 ) : EnemyData() {
     companion object {
         val MAP_DATA = BossBattleMapData(
@@ -32,7 +33,7 @@ class ChosenSerenData(
     override val game: Game = initGame
     override val status: EntityStatus = ChosenSerenStatus()
 
-    override val maxHealth: Double = 2000.0
+    override val maxHealth: Double = if (phase == 1) 2000.0 else 2600.0
     override var health: Double = maxHealth
     override val displayName: String = "선택받은 세렌"
 
@@ -47,6 +48,10 @@ class ChosenSerenData(
     override val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
     override val interactionSummonCommand: String =
         "/summon interaction 47.0 -35.57565 -76.0 {width:2f,height:3f,Tags:[\"boss_interaction\"]}"
+    override fun createNextPhase(): EnemyData? {
+        if (phase >= 2) return null
+        return ChosenSerenData(initGame, phase + 1)
+    }
 
     override val entity = resolveBossEntity()
 
