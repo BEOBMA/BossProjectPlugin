@@ -40,7 +40,7 @@ class JudgmentLight : PatternSkill(), Listener {
     override val name: String = "심판의 빛"
     override val description: List<String> = listOf(
         "<gray>일정 시간마다 8갈래의 심판의 빛을 발사한다.",
-        "<gray>피격 시 50% 피해를 입고, 일정 시간동안 빗나감 상태이상에 빠지며 태양의 저주 수치가 증가한다."
+        "<gray>피격 시 50%의 피해를 입고, 일정 시간동안 빗나감 상태이상에 빠지며 태양의 저주 수치가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.END_ROD)
 

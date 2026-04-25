@@ -37,8 +37,8 @@ class LightArrow : PatternSkill() {
 
     override val name: String = "빛의 화살"
     override val description: List<String> = listOf(
-        "<gray>40초마다 임의의 위치에 수직으로 떨어지는 빛의 화살을 대량으로 소환한다.",
-        "<gray>피격 시 최대 체력의 5% 피해를 입고 태양의 저주 수치가 20 상승한다."
+        "<gray>40초마다 무작위 위치에 수직으로 떨어지는 빛의 화살을 대량으로 소환한다.",
+        "<gray>피격 시 5%의 피해를 입고 태양의 저주 수치가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.END_ROD)
 
