@@ -19,17 +19,21 @@ import java.util.UUID
 
 object PlayerDeathLifecycleManager : Listener {
     private const val AUTO_RESPAWN_TICKS = 20L * 30L
+    private const val SNEAK_HOLD_RESPAWN_TICKS = 20L * 3L
     private const val RESPAWN_IMMUNE_MILLIS = 3_000L
 
     private val miniMessage = MiniMessage.miniMessage()
     private val pendingRespawnLocations: MutableMap<UUID, Location> = mutableMapOf()
     private val fixedSpectatorPlayers: MutableSet<UUID> = mutableSetOf()
     private val autoRespawnTasks: MutableMap<UUID, BukkitTask> = mutableMapOf()
+    private val sneakHoldRespawnTasks: MutableMap<UUID, BukkitTask> = mutableMapOf()
     private val respawnInvulnerableUntilByPlayer: MutableMap<UUID, Long> = mutableMapOf()
 
     fun clearAllStates() {
         autoRespawnTasks.values.forEach { it.cancel() }
+        sneakHoldRespawnTasks.values.forEach { it.cancel() }
         autoRespawnTasks.clear()
+        sneakHoldRespawnTasks.clear()
         pendingRespawnLocations.clear()
         fixedSpectatorPlayers.clear()
         respawnInvulnerableUntilByPlayer.clear()
@@ -85,11 +89,26 @@ object PlayerDeathLifecycleManager : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onSneakForInstantRespawn(event: PlayerToggleSneakEvent) {
-        if (!event.isSneaking) return
         val player = event.player
-        if (!pendingRespawnLocations.containsKey(player.uniqueId)) return
-        event.isCancelled = true
-        respawnPlayer(player)
+        val uuid = player.uniqueId
+        if (!pendingRespawnLocations.containsKey(uuid)) return
+
+        if (event.isSneaking) {
+            sneakHoldRespawnTasks.remove(uuid)?.cancel()
+            sneakHoldRespawnTasks[uuid] = BossProjectPlugin.instance.server.scheduler.runTaskLater(
+                BossProjectPlugin.instance,
+                Runnable {
+                    if (!pendingRespawnLocations.containsKey(uuid)) return@Runnable
+                    if (player.isSneaking) {
+                        respawnPlayer(player)
+                    }
+                },
+                SNEAK_HOLD_RESPAWN_TICKS
+            )
+            return
+        }
+
+        sneakHoldRespawnTasks.remove(uuid)?.cancel()
     }
 
     @EventHandler
@@ -118,7 +137,7 @@ object PlayerDeathLifecycleManager : Listener {
             val remainText = remainingAfterDeath?.let { "<gray>(남은 데스카운트: $it)</gray>" } ?: ""
             player.sendMessage(
                 miniMessage.deserialize(
-                    "<yellow>30초 후 자동으로 부활합니다. <aqua>웅크리기(Shift)</aqua> 키로 즉시 부활할 수 있습니다.</yellow> $remainText"
+                    "<yellow>30초 후 자동으로 부활합니다. <aqua>웅크리기(Shift)</aqua> 키를 3초간 유지하면 즉시 부활할 수 있습니다.</yellow> $remainText"
                 )
             )
             return
@@ -173,6 +192,7 @@ object PlayerDeathLifecycleManager : Listener {
 
     private fun clearPlayerState(uuid: UUID) {
         autoRespawnTasks.remove(uuid)?.cancel()
+        sneakHoldRespawnTasks.remove(uuid)?.cancel()
         pendingRespawnLocations.remove(uuid)
         fixedSpectatorPlayers.remove(uuid)
         respawnInvulnerableUntilByPlayer.remove(uuid)
