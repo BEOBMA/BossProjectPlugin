@@ -35,6 +35,7 @@ import kotlin.random.Random
 
 object GameManager : Listener {
     private const val JOB_SELECT_TIMEOUT_TICKS = 20L * 30L
+    private const val PHASE_TRANSITION_DELAY_TICKS = 20L * 5L
     private const val INVENTORY_SIZE = 54
     private const val PAGE_CAPACITY = 44
 
@@ -42,8 +43,10 @@ object GameManager : Listener {
     private var currentGame: Game? = null
     private var activeSession: JobSelectionSession? = null
     private var bossLoopTask: BukkitTask? = null
+    private var phaseTransitionTask: BukkitTask? = null
     private var bossBar: BossBar? = null
     private var patternOnlyTestMode: Boolean = false
+    private var phaseTransitioning: Boolean = false
 
     private val miniMessage = MiniMessage.miniMessage()
 
@@ -72,9 +75,13 @@ object GameManager : Listener {
         activeSession?.terminate()
         activeSession = null
 
+        phaseTransitionTask?.cancel()
+        phaseTransitionTask = null
+        phaseTransitioning = false
         bossLoopTask?.cancel()
         bossLoopTask = null
         clearBossBar()
+        clearPlayerInvulnerability(game)
         PlayerDeathLifecycleManager.clearAllStates()
         PlayerStatusEffectManager.clearAllStates()
 
@@ -247,6 +254,8 @@ object GameManager : Listener {
                 status?.let { it.elapsedTicks += 20L }
                 updateBossBar(game)
 
+                if (phaseTransitioning) return
+
                 if (!patternOnlyTestMode) {
                     game.bossData.passives.forEach { it.onTick() }
                 }
@@ -263,19 +272,59 @@ object GameManager : Listener {
             return
         }
 
+        phaseTransitioning = true
         clearedBoss.patternSkills.forEach { it.onGameEnd() }
         if (clearedBoss.entity.isValid) {
             clearedBoss.entity.remove()
         }
 
-        game.setupBoss(nextPhaseBoss)
-        initializeBossBar(game)
+        game.playerDatas
+            .map { it.player }
+            .filter { it.isOnline }
+            .forEach { it.isInvulnerable = true }
 
         Bukkit.broadcast(
             miniMessage.deserialize(
-                "<gold>${clearedBoss.displayName} ${clearedBoss.phase}페이즈 종료!</gold> <red>${nextPhaseBoss.phase}페이즈 시작!</red>"
+                "<gold>${clearedBoss.displayName} ${clearedBoss.phase}페이즈 종료!</gold> <yellow>5초 후 ${nextPhaseBoss.phase}페이즈를 시작합니다.</yellow>"
             )
         )
+
+        phaseTransitionTask?.cancel()
+        phaseTransitionTask = object : BukkitRunnable() {
+            override fun run() {
+                if (currentGame !== game) {
+                    cancel()
+                    return
+                }
+
+                game.setupMap(nextPhaseBoss.mapData)
+                game.setupBoss(nextPhaseBoss)
+                game.playerDatas
+                    .map { it.player }
+                    .filter { it.isOnline }
+                    .forEach { player ->
+                        player.teleport(nextPhaseBoss.mapData.spawnLocation())
+                        player.isInvulnerable = false
+                    }
+
+                initializeBossBar(game)
+                phaseTransitioning = false
+                phaseTransitionTask = null
+
+                Bukkit.broadcast(
+                    miniMessage.deserialize(
+                        "<red>${nextPhaseBoss.phase}페이즈 시작!</red>"
+                    )
+                )
+            }
+        }.runTaskLater(BossProjectPlugin.instance, PHASE_TRANSITION_DELAY_TICKS)
+    }
+
+    private fun clearPlayerInvulnerability(game: Game) {
+        game.playerDatas
+            .map { it.player }
+            .filter { it.isOnline }
+            .forEach { it.isInvulnerable = false }
     }
 
     private fun initializeBossBar(game: Game) {
