@@ -41,6 +41,12 @@ object PlayerDeathLifecycleManager : Listener {
         return false
     }
 
+    fun canBeTargetedByPattern(player: Player): Boolean {
+        if (!player.isOnline || player.isDead) return false
+        if (player.gameMode != GameMode.SURVIVAL) return false
+        return !isRespawnInvulnerable(player)
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerDamaged(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return

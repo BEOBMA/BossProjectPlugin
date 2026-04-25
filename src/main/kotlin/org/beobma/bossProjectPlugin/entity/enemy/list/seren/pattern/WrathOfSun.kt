@@ -81,7 +81,7 @@ class WrathOfSun : PatternSkill() {
                 block.x in area.minX..area.maxX &&
                         block.z in area.minZ..area.maxZ &&
                         block.y in area.floorY..(area.floorY + 2) &&
-                        !PlayerDeathLifecycleManager.isRespawnInvulnerable(player)
+                        PlayerDeathLifecycleManager.canBeTargetedByPattern(player)
             }
             .forEach { player ->
                 player.damage(player.maxHealth * 0.4, enemyData.entity)

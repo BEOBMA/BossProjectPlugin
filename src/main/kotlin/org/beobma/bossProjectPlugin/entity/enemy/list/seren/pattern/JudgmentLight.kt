@@ -142,8 +142,7 @@ class JudgmentLight : PatternSkill(), Listener {
         val curseOfSun = enemyData.passives.firstOrNull { it is CurseOfSun } as? CurseOfSun
 
         world.players
-            .filter { it.isOnline && !it.isDead }
-            .filterNot { PlayerDeathLifecycleManager.isRespawnInvulnerable(it) }
+            .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
             .filter { isHitByAnyRay(it, center.toVector(), directions) }
             .forEach { player ->
                 player.damage(player.maxHealth * damageRatio, enemyData.entity)
