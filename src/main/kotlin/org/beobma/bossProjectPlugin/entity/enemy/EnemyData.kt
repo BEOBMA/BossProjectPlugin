@@ -5,6 +5,7 @@ import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
+import java.util.UUID
 
 abstract class EnemyData : EntityData() {
     abstract val maxHealth: Double
@@ -19,22 +20,56 @@ abstract class EnemyData : EntityData() {
 
     open val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
     open val interactionSummonCommand: String? = null
+    open val interactionSummonCommands: List<String>
+        get() = interactionSummonCommand?.let(::listOf) ?: emptyList()
     open fun createNextPhase(): EnemyData? = null
 
     protected fun resolveBossEntity(): Entity {
         val world = mapData.world()
-        interactionSummonCommand?.let { summonCommand ->
-            world.entities
-                .filter { it.scoreboardTags.contains(interactionTag) }
-                .forEach { it.remove() }
-            val normalizedCommand = summonCommand.removePrefix("/")
-            Bukkit.dispatchCommand(
-                Bukkit.getConsoleSender(),
-                "execute in ${world.key.asString()} run $normalizedCommand"
-            )
+        if (interactionSummonCommands.isNotEmpty()) {
+            val summonTags = interactionSummonCommands.map { summonCommand ->
+                val summonTag = "${interactionTag}_${UUID.randomUUID().toString().replace("-", "")}"
+                val commandWithTag = appendSummonTag(summonCommand, summonTag)
+                Bukkit.dispatchCommand(
+                    Bukkit.getConsoleSender(),
+                    "execute in ${world.key.asString()} run ${commandWithTag.removePrefix("/")}"
+                )
+                summonTag
+            }
+
+            val mainSummonTag = summonTags.first()
+            return world.entities.firstOrNull {
+                it.scoreboardTags.contains(interactionTag) && it.scoreboardTags.contains(mainSummonTag)
+            } ?: error("새로 소환된 보스 엔티티 태그 '$mainSummonTag' 를 월드 '${world.name}' 에서 찾지 못했습니다.")
         }
 
         return world.entities.firstOrNull { it.scoreboardTags.contains(interactionTag) }
             ?: error("보스 엔티티 태그 '$interactionTag' 를 가진 엔티티를 월드 '${world.name}' 에서 찾지 못했습니다.")
+    }
+
+    private fun appendSummonTag(command: String, summonTag: String): String {
+        val serializedTag = "\"$summonTag\""
+        val tagsRegex = Regex("""Tags\s*:\s*\[(.*?)]""")
+        if (tagsRegex.containsMatchIn(command)) {
+            return command.replace(tagsRegex) { match ->
+                val existingTags = match.groupValues[1].trim()
+                val mergedTags = if (existingTags.isEmpty()) serializedTag else "$existingTags,$serializedTag"
+                "Tags:[$mergedTags]"
+            }
+        }
+
+        val nbtStart = command.indexOf('{')
+        val nbtEnd = command.lastIndexOf('}')
+        if (nbtStart != -1 && nbtEnd > nbtStart) {
+            return buildString {
+                append(command.substring(0, nbtEnd))
+                append(",Tags:[")
+                append(serializedTag)
+                append(']')
+                append(command.substring(nbtEnd))
+            }
+        }
+
+        return "$command {Tags:[$serializedTag]}"
     }
 }
