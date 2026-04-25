@@ -205,7 +205,7 @@ class MeteoriteOfLight : PatternSkill(), Listener {
     }
 
     private fun isMeteoriteDisplay(display: BlockDisplay, meteoriteNumber: Int): Boolean {
-        return display.scoreboardTags.contains("meteorite_of_light_$meteoriteNumber")
+        return display.scoreboardTags.contains("meteorite_of_light_${meteoriteNumber}_0")
     }
 
     private fun runFunctionWithCommandBlockMinecartAt(spawnLocation: SpawnLocation, functionId: String) {
