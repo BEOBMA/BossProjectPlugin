@@ -20,7 +20,7 @@ import kotlin.random.Random
 class MeteoriteOfLight : PatternSkill(), Listener {
     private val meteoriteCount = 8
     private val cooldownTick = 20L * 10
-    private val minSpawnY = -25.0
+    private val minSpawnY = -38.0
     private val minX = 32.5
     private val maxX = 61.5
     private val minZ = -91.5
