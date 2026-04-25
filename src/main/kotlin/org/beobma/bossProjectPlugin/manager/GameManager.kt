@@ -56,6 +56,7 @@ object GameManager : Listener {
         ensureListenerRegistered()
         clearBossBar()
         PlayerDeathLifecycleManager.clearAllStates()
+        PlayerStatusEffectManager.clearAllStates()
 
         val game = Game()
         players.forEach { player ->
@@ -75,6 +76,7 @@ object GameManager : Listener {
         bossLoopTask = null
         clearBossBar()
         PlayerDeathLifecycleManager.clearAllStates()
+        PlayerStatusEffectManager.clearAllStates()
 
         if (game.isBossInitialized) {
             game.bossData.patternSkills.forEach { it.onGameEnd() }

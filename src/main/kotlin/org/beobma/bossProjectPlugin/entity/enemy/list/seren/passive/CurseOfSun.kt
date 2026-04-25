@@ -4,6 +4,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.manager.PlayerDeathLifecycleManager
+import org.beobma.bossProjectPlugin.manager.PlayerStatusEffectManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -27,7 +28,6 @@ class CurseOfSun : BossPassive(), Listener {
 
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
-    private val disabledUntilByPlayer: MutableMap<UUID, Long> = mutableMapOf()
     private var listenerRegistered = false
 
     override val name: String = "태양의 저주"
@@ -67,13 +67,12 @@ class CurseOfSun : BossPassive(), Listener {
         if (next < maxGauge) return
 
         gaugeByPlayer[uuid] = 0
-        val disabledUntil = System.currentTimeMillis() + disabledMillis
-        disabledUntilByPlayer[uuid] = disabledUntil
+        PlayerStatusEffectManager.apply(uuid, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED, disabledMillis)
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
-        if (!isRestricted(event.player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         val from = event.from
         val to = event.to ?: return
         if (from.x == to.x && from.y == to.y && from.z == to.z) return
@@ -82,51 +81,41 @@ class CurseOfSun : BossPassive(), Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerInteract(event: PlayerInteractEvent) {
-        if (!isRestricted(event.player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         if (event.action == Action.PHYSICAL) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerInteractAtEntity(event: PlayerInteractAtEntityEvent) {
-        if (!isRestricted(event.player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerSwap(event: PlayerSwapHandItemsEvent) {
-        if (!isRestricted(event.player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerDrop(event: PlayerDropItemEvent) {
-        if (!isRestricted(event.player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerAttack(event: EntityDamageByEntityEvent) {
         val attacker = event.damager as? Player ?: return
-        if (!isRestricted(attacker.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(attacker.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerRegainHealth(event: EntityRegainHealthEvent) {
         val player = event.entity as? Player ?: return
-        if (!isRestricted(player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
-    }
-
-    private fun isRestricted(uuid: UUID): Boolean {
-        val disabledUntil = disabledUntilByPlayer[uuid] ?: return false
-        if (System.currentTimeMillis() <= disabledUntil) {
-            return true
-        }
-
-        disabledUntilByPlayer.remove(uuid)
-        return false
     }
 
     private fun buildActionBarText(uuid: UUID): net.kyori.adventure.text.Component {
