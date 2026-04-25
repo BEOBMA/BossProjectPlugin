@@ -34,6 +34,7 @@ class WrathOfSun : PatternSkill() {
         "<gray>피격 시 40%의 피해를 입고 태양의 저주 수치가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.BLAZE_POWDER)
+    override val validPhases: Set<Int> = setOf(1)
 
     override fun inject(enemyData: EnemyData) {
         super.inject(enemyData)
