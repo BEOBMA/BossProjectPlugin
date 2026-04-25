@@ -18,7 +18,7 @@ class ChosenSerenData(
     override val phase: Int = 1
 ) : EnemyData() {
     companion object {
-        val MAP_DATA = BossBattleMapData(
+        val PHASE_1_MAP_DATA = BossBattleMapData(
             id = "chosen_seren_arena",
             worldName = "world",
             spawnX = 61.5,
@@ -28,6 +28,19 @@ class ChosenSerenData(
             deathLimit = 8,
             timeLimitMinutes = 30
         )
+
+        val PHASE_2_MAP_DATA = BossBattleMapData(
+            id = "chosen_seren_arena_phase2",
+            worldName = "world",
+            spawnX = 61.5,
+            spawnY = -37.0,
+            spawnZ = -62.5,
+            deathCountMode = DeathCountMode.PER_PLAYER,
+            deathLimit = 8,
+            timeLimitMinutes = 30
+        )
+
+        val MAP_DATA: BossBattleMapData = PHASE_1_MAP_DATA
     }
 
     override val game: Game = initGame
@@ -43,7 +56,7 @@ class ChosenSerenData(
         JudgmentLight(),
         LightArrow()
     )
-    override val mapData: BossBattleMapData = MAP_DATA
+    override val mapData: BossBattleMapData = if (phase == 1) PHASE_1_MAP_DATA else PHASE_2_MAP_DATA
 
     override val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
     override val interactionSummonCommands: List<String> = listOf(
