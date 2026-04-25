@@ -32,9 +32,9 @@ class ChosenSerenData(
         val PHASE_2_MAP_DATA = BossBattleMapData(
             id = "chosen_seren_arena_phase2",
             worldName = "world",
-            spawnX = 61.5,
+            spawnX = -0.5,
             spawnY = -37.0,
-            spawnZ = -62.5,
+            spawnZ = -99.5,
             deathCountMode = DeathCountMode.PER_PLAYER,
             deathLimit = 8,
             timeLimitMinutes = 30
