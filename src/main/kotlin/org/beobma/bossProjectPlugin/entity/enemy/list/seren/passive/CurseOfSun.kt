@@ -40,6 +40,7 @@ class CurseOfSun : BossPassive(), Listener {
     private val preShiftWarningTicks = 20L * 3L
     private val phase2TransitionParticleDurationTicks = 20L * 5L
     private val phase2TransitionParticleIntervalTicks = 2L
+    private val phase2TransitionPostShiftMaintainTicks = 10L // 0.5s
     private val phase2TransitionParticleCountPerPlayer = 450
     private val mapShiftDistanceX = 35.0
 
@@ -324,7 +325,10 @@ class CurseOfSun : BossPassive(), Listener {
         phase2BlindnessTask?.cancel()
 
         val totalSteps = (phase2TransitionParticleDurationTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
+        val maintainSteps = (phase2TransitionPostShiftMaintainTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
         var step = 0
+        var transitionCompleted = false
+        var remainingMaintainSteps = maintainSteps
         val markerBlockData = Material.WHITE_CONCRETE.createBlockData()
 
         phase2BlindnessTask = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
@@ -354,10 +358,17 @@ class CurseOfSun : BossPassive(), Listener {
                     }
 
                 step++
-                if (step > totalSteps) {
-                    phase2BlindnessTask?.cancel()
-                    phase2BlindnessTask = null
+                if (!transitionCompleted && step > totalSteps) {
+                    transitionCompleted = true
                     onCompleted()
+                }
+
+                if (transitionCompleted) {
+                    remainingMaintainSteps--
+                    if (remainingMaintainSteps <= 0) {
+                        phase2BlindnessTask?.cancel()
+                        phase2BlindnessTask = null
+                    }
                 }
             },
             0L,
