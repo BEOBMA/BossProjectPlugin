@@ -7,6 +7,7 @@ import org.beobma.bossProjectPlugin.entity.enemy.DeathCountMode
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.JudgmentLight
+import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.LightArrow
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.WrathOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
@@ -38,7 +39,8 @@ class ChosenSerenData(
     override val passives: List<BossPassive> = listOf(CurseOfSun())
     override val patternSkills: List<PatternSkill> = listOf(
         WrathOfSun(),
-        JudgmentLight()
+        JudgmentLight(),
+        LightArrow()
     )
     override val mapData: BossBattleMapData = MAP_DATA
 
