@@ -2,6 +2,7 @@ package org.beobma.bossProjectPlugin.manager
 
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.BossProjectPlugin
+import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyStatus
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.game.Game
@@ -90,8 +91,8 @@ object GameManager : Listener {
             game.bossData.patternSkills.forEach { it.onGameEnd() }
         }
 
-        if (game.isBossInitialized && game.bossData.entity.isValid) {
-            game.bossData.entity.remove()
+        if (game.isBossInitialized) {
+            removeBossInteractions(game.bossData)
         }
 
         Bukkit.getOnlinePlayers().forEach { onlinePlayer ->
@@ -222,7 +223,7 @@ object GameManager : Listener {
 
     fun applyBossInteractionDamage(attacker: Entity, damaged: Entity, damageAmount: Double) {
         val game = currentGame ?: return
-        if (damaged.uniqueId != game.bossData.entity.uniqueId) return
+        if (!game.bossData.interactionEntityIds().contains(damaged.uniqueId)) return
         if (!isPlayerDamageSource(attacker)) return
         if (damageAmount <= 0.0) return
 
@@ -276,9 +277,7 @@ object GameManager : Listener {
         phaseTransitioning = true
         clearedBoss.passives.forEach { it.onGameEnd() }
         clearedBoss.patternSkills.forEach { it.onGameEnd() }
-        if (clearedBoss.entity.isValid) {
-            clearedBoss.entity.remove()
-        }
+        removeBossInteractions(clearedBoss)
 
         game.playerDatas
             .map { it.player }
@@ -328,6 +327,14 @@ object GameManager : Listener {
             .map { it.player }
             .filter { it.isOnline }
             .forEach { it.isInvulnerable = false }
+    }
+
+    private fun removeBossInteractions(enemyData: EnemyData) {
+        enemyData.resolveInteractionEntities().forEach { interactionEntity ->
+            if (interactionEntity.isValid) {
+                interactionEntity.remove()
+            }
+        }
     }
 
     private fun initializeBossBar(game: Game) {
