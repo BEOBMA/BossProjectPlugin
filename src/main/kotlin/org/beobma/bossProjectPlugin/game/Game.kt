@@ -5,6 +5,7 @@ import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.entity.enemy.BossBattleMapData
 import org.beobma.bossProjectPlugin.entity.enemy.DeathCountMode
 import java.util.UUID
+import kotlin.math.max
 
 class Game {
     val playerDatas: MutableList<PlayerData> = mutableListOf()
@@ -68,5 +69,26 @@ class Game {
             DeathCountMode.SHARED -> increaseSharedDeath()
         }
         return true
+    }
+
+    fun carryOverDeathState(nextMapData: BossBattleMapData) {
+        val currentLimit = mapData.deathLimit ?: return
+        val nextLimit = nextMapData.deathLimit ?: return
+
+        when {
+            mapData.deathCountMode == DeathCountMode.PER_PLAYER && nextMapData.deathCountMode == DeathCountMode.PER_PLAYER -> {
+                playerDatas.forEach { playerData ->
+                    val uuid = playerData.player.uniqueId
+                    val spentCount = playerDeathCount(uuid)
+                    val previousRemaining = max(currentLimit - spentCount, 0)
+                    deathCountByPlayer[uuid] = max(nextLimit - previousRemaining, 0)
+                }
+            }
+            mapData.deathCountMode == DeathCountMode.SHARED && nextMapData.deathCountMode == DeathCountMode.SHARED -> {
+                val previousRemaining = max(currentLimit - sharedDeathCount, 0)
+                sharedDeathCount = max(nextLimit - previousRemaining, 0)
+            }
+            else -> Unit
+        }
     }
 }

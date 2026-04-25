@@ -297,6 +297,7 @@ object GameManager : Listener {
                     return
                 }
 
+                game.carryOverDeathState(nextPhaseBoss.mapData)
                 game.setupMap(nextPhaseBoss.mapData)
                 game.setupBoss(nextPhaseBoss)
                 game.playerDatas
