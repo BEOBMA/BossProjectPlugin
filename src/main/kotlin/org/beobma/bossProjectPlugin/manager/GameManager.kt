@@ -86,6 +86,7 @@ object GameManager : Listener {
         PlayerStatusEffectManager.clearAllStates()
 
         if (game.isBossInitialized) {
+            game.bossData.passives.forEach { it.onGameEnd() }
             game.bossData.patternSkills.forEach { it.onGameEnd() }
         }
 
@@ -273,6 +274,7 @@ object GameManager : Listener {
         }
 
         phaseTransitioning = true
+        clearedBoss.passives.forEach { it.onGameEnd() }
         clearedBoss.patternSkills.forEach { it.onGameEnd() }
         if (clearedBoss.entity.isValid) {
             clearedBoss.entity.remove()

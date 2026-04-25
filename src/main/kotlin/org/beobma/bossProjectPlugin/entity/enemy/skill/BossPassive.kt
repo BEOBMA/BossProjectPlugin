@@ -30,6 +30,10 @@ abstract class BossPassive {
         runMcFunction()
     }
 
+    open fun onGameEnd() {
+        // default no-op
+    }
+
     protected fun isPhaseValid(): Boolean {
         val phases = validPhases ?: return true
         return phases.contains(enemyData.phase)
