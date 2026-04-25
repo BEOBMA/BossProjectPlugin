@@ -137,7 +137,7 @@ object PlayerDeathLifecycleManager : Listener {
             val remainText = remainingAfterDeath?.let { "<gray>(남은 데스카운트: $it)</gray>" } ?: ""
             player.sendMessage(
                 miniMessage.deserialize(
-                    "<yellow>30초 후 자동으로 부활합니다. <aqua>웅크리기(Shift)</aqua> 키를 3초간 유지하면 즉시 부활할 수 있습니다.</yellow> $remainText"
+                    "<yellow>30초 후 자동으로 부활합니다. <key:key.sneak> 키를 3초간 유지하면 즉시 부활할 수 있습니다.</yellow> $remainText"
                 )
             )
             return
