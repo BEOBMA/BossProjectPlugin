@@ -220,6 +220,10 @@ object GameManager : Listener {
 
         game.bossData.health = (game.bossData.health - damageAmount).coerceAtLeast(0.0)
         updateBossBar(game)
+
+        if (game.bossData.health <= 0.0) {
+            handleBossPhaseCleared(game)
+        }
     }
 
     private fun isPlayerDamageSource(entity: Entity): Boolean {
@@ -251,6 +255,29 @@ object GameManager : Listener {
         }.runTaskTimer(BossProjectPlugin.instance, 20L, 20L)
     }
 
+    private fun handleBossPhaseCleared(game: Game) {
+        val clearedBoss = game.bossData
+        val nextPhaseBoss = clearedBoss.createNextPhase()
+        if (nextPhaseBoss == null) {
+            terminateCurrentGame("${clearedBoss.displayName} 처치 완료!", broadcast = true)
+            return
+        }
+
+        clearedBoss.patternSkills.forEach { it.onGameEnd() }
+        if (clearedBoss.entity.isValid) {
+            clearedBoss.entity.remove()
+        }
+
+        game.setupBoss(nextPhaseBoss)
+        initializeBossBar(game)
+
+        Bukkit.broadcast(
+            miniMessage.deserialize(
+                "<gold>${clearedBoss.displayName} ${clearedBoss.phase}페이즈 종료!</gold> <red>${nextPhaseBoss.phase}페이즈 시작!</red>"
+            )
+        )
+    }
+
     private fun initializeBossBar(game: Game) {
         clearBossBar()
         val created = Bukkit.createBossBar("", BarColor.RED, BarStyle.SOLID)
@@ -271,7 +298,7 @@ object GameManager : Listener {
             (game.bossData.health / game.bossData.maxHealth).coerceIn(0.0, 1.0)
         }
         val percent = progress * 100.0
-        targetBar.setTitle("${game.bossData.displayName} ${"%.1f".format(Locale.US, percent)}%")
+        targetBar.setTitle("${game.bossData.displayName} P${game.bossData.phase} ${"%.1f".format(Locale.US, percent)}%")
         targetBar.progress = progress
     }
 

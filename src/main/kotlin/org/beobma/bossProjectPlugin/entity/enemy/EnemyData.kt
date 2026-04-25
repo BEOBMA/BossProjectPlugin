@@ -9,6 +9,7 @@ import org.bukkit.entity.Entity
 abstract class EnemyData : EntityData() {
     abstract val maxHealth: Double
     abstract var health: Double
+    open val phase: Int = 1
     open val displayName: String
         get() = this::class.simpleName ?: "Unknown Boss"
 
@@ -18,6 +19,7 @@ abstract class EnemyData : EntityData() {
 
     open val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
     open val interactionSummonCommand: String? = null
+    open fun createNextPhase(): EnemyData? = null
 
     protected fun resolveBossEntity(): Entity {
         val world = mapData.world()
