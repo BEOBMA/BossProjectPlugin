@@ -4,6 +4,7 @@ import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
 import org.beobma.bossProjectPlugin.manager.PlayerDeathLifecycleManager
+import org.beobma.bossProjectPlugin.manager.PlayerStatusEffectManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Particle
@@ -16,7 +17,6 @@ import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.util.Vector
-import java.util.UUID
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -34,7 +34,6 @@ class JudgmentLight : PatternSkill(), Listener {
     private val curseGaugeIncrease = 150
     private val attackMissDurationMillis = 5_000L
 
-    private val missUntilByPlayer: MutableMap<UUID, Long> = mutableMapOf()
     private var listenerRegistered = false
 
     override val name: String = "심판의 빛"
@@ -72,7 +71,7 @@ class JudgmentLight : PatternSkill(), Listener {
         val shooter = (event.damager as? org.bukkit.entity.Projectile)?.shooter as? Player
         val player = attacker ?: shooter ?: return
 
-        if (!isAttackMissActive(player.uniqueId)) return
+        if (!PlayerStatusEffectManager.isActive(player.uniqueId, PlayerStatusEffectManager.Effect.ATTACK_MISS)) return
         event.isCancelled = true
     }
 
@@ -147,7 +146,7 @@ class JudgmentLight : PatternSkill(), Listener {
             .forEach { player ->
                 player.damage(player.maxHealth * damageRatio, enemyData.entity)
                 curseOfSun?.increaseGauge(player, curseGaugeIncrease)
-                missUntilByPlayer[player.uniqueId] = System.currentTimeMillis() + attackMissDurationMillis
+                PlayerStatusEffectManager.apply(player.uniqueId, PlayerStatusEffectManager.Effect.ATTACK_MISS, attackMissDurationMillis)
                 player.world.playSound(player.location, Sound.ENTITY_ZOMBIE_VILLAGER_CURE, SoundCategory.MASTER, 0.4f, 0.7f)
             }
 
@@ -169,10 +168,4 @@ class JudgmentLight : PatternSkill(), Listener {
         }
     }
 
-    private fun isAttackMissActive(uuid: UUID): Boolean {
-        val missUntil = missUntilByPlayer[uuid] ?: return false
-        if (System.currentTimeMillis() <= missUntil) return true
-        missUntilByPlayer.remove(uuid)
-        return false
-    }
 }
