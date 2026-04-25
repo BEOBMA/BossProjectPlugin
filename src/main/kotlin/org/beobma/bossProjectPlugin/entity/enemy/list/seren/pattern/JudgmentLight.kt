@@ -3,6 +3,7 @@ package org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern
 import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
+import org.beobma.bossProjectPlugin.manager.PlayerDeathLifecycleManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Particle
@@ -142,6 +143,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
         world.players
             .filter { it.isOnline && !it.isDead }
+            .filterNot { PlayerDeathLifecycleManager.isRespawnInvulnerable(it) }
             .filter { isHitByAnyRay(it, center.toVector(), directions) }
             .forEach { player ->
                 player.damage(player.maxHealth * damageRatio, enemyData.entity)

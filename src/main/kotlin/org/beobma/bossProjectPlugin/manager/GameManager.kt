@@ -55,6 +55,7 @@ object GameManager : Listener {
     fun startGame(players: Collection<Player>) {
         ensureListenerRegistered()
         clearBossBar()
+        PlayerDeathLifecycleManager.clearAllStates()
 
         val game = Game()
         players.forEach { player ->
@@ -73,6 +74,7 @@ object GameManager : Listener {
         bossLoopTask?.cancel()
         bossLoopTask = null
         clearBossBar()
+        PlayerDeathLifecycleManager.clearAllStates()
 
         if (game.isBossInitialized && game.bossData.entity.isValid) {
             game.bossData.entity.remove()
