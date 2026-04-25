@@ -358,7 +358,7 @@ object GameManager : Listener {
             (game.bossData.health / game.bossData.maxHealth).coerceIn(0.0, 1.0)
         }
         val percent = progress * 100.0
-        targetBar.setTitle("${game.bossData.displayName} P${game.bossData.phase} ${"%.1f".format(Locale.US, percent)}%")
+        targetBar.setTitle("${game.bossData.displayName} ${"%.1f".format(Locale.US, percent)}%")
         targetBar.progress = progress
     }
 
