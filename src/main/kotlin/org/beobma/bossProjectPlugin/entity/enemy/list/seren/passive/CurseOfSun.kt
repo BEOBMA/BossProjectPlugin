@@ -55,6 +55,7 @@ class CurseOfSun : BossPassive(), Listener {
     }
 
     fun increaseGauge(player: Player, amount: Int) {
+        if (!isPhaseValid()) return
         if (!PlayerDeathLifecycleManager.canBeTargetedByPattern(player)) return
 
         val uuid = player.uniqueId
@@ -72,6 +73,7 @@ class CurseOfSun : BossPassive(), Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
+        if (!isPhaseValid()) return
         if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         val from = event.from
         val to = event.to ?: return
@@ -81,6 +83,7 @@ class CurseOfSun : BossPassive(), Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (!isPhaseValid()) return
         if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         if (event.action == Action.PHYSICAL) return
         event.isCancelled = true
@@ -88,24 +91,28 @@ class CurseOfSun : BossPassive(), Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerInteractAtEntity(event: PlayerInteractAtEntityEvent) {
+        if (!isPhaseValid()) return
         if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerSwap(event: PlayerSwapHandItemsEvent) {
+        if (!isPhaseValid()) return
         if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerDrop(event: PlayerDropItemEvent) {
+        if (!isPhaseValid()) return
         if (!PlayerStatusEffectManager.isActive(event.player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerAttack(event: EntityDamageByEntityEvent) {
+        if (!isPhaseValid()) return
         val attacker = event.damager as? Player ?: return
         if (!PlayerStatusEffectManager.isActive(attacker.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true
@@ -113,6 +120,7 @@ class CurseOfSun : BossPassive(), Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerRegainHealth(event: EntityRegainHealthEvent) {
+        if (!isPhaseValid()) return
         val player = event.entity as? Player ?: return
         if (!PlayerStatusEffectManager.isActive(player.uniqueId, PlayerStatusEffectManager.Effect.ACTION_RESTRICTED)) return
         event.isCancelled = true

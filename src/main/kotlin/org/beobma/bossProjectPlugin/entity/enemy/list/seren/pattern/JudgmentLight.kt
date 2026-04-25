@@ -67,6 +67,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerAttack(event: EntityDamageByEntityEvent) {
+        if (!isPhaseValid()) return
         val attacker = event.damager as? Player
         val shooter = (event.damager as? org.bukkit.entity.Projectile)?.shooter as? Player
         val player = attacker ?: shooter ?: return

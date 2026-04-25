@@ -16,6 +16,7 @@ abstract class BossPassive {
     abstract val itemStack: ItemStack
 
     open val functionId: String? = null
+    open val validPhases: Set<Int>? = null
 
     open fun inject(enemyData: EnemyData) {
         if (enemyData.status !is EnemyStatus) return
@@ -25,7 +26,13 @@ abstract class BossPassive {
     }
 
     open fun onTick() {
+        if (!isPhaseValid()) return
         runMcFunction()
+    }
+
+    protected fun isPhaseValid(): Boolean {
+        val phases = validPhases ?: return true
+        return phases.contains(enemyData.phase)
     }
 
     protected fun runMcFunction() {

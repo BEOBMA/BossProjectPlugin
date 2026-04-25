@@ -20,6 +20,7 @@ abstract class PatternSkill {
     abstract val itemStack: ItemStack
 
     open val functionId: String? = null
+    open val validPhases: Set<Int>? = null
 
     open fun inject(enemyData: EnemyData) {
         if (enemyData.status !is EnemyStatus) return
@@ -31,6 +32,7 @@ abstract class PatternSkill {
     abstract fun canUse(): Boolean
 
     fun use() {
+        if (!isPhaseValid()) return
         if (!canUse()) return
         runMcFunction()
         onUse()
@@ -52,6 +54,11 @@ abstract class PatternSkill {
 
     protected fun markUsedNow() {
         lastUsedTick = enemyStatus.elapsedTicks
+    }
+
+    protected fun isPhaseValid(): Boolean {
+        val phases = validPhases ?: return true
+        return phases.contains(enemyData.phase)
     }
 
 
