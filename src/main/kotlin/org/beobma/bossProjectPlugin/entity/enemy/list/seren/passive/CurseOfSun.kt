@@ -55,7 +55,7 @@ class CurseOfSun : BossPassive(), Listener {
     }
 
     fun increaseGauge(player: Player, amount: Int) {
-        if (PlayerDeathLifecycleManager.isRespawnInvulnerable(player)) return
+        if (!PlayerDeathLifecycleManager.canBeTargetedByPattern(player)) return
 
         val uuid = player.uniqueId
         val current = gaugeByPlayer[uuid] ?: 0
