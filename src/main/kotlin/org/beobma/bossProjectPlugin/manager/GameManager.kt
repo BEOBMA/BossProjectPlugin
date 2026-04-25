@@ -194,7 +194,10 @@ object GameManager : Listener {
         game.initializeBattleState()
 
         game.playerDatas.forEach { playerData ->
-            playerData.player.teleport(spawnLocation)
+            val player = playerData.player
+            player.teleport(spawnLocation)
+            player.level = game.remainingDeaths(player.uniqueId) ?: 0
+            player.exp = 0f
         }
 
         Bukkit.broadcast(miniMessage.deserialize("<green>직업 선택이 완료되어 보스전 맵으로 이동합니다.</green>"))
