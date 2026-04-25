@@ -23,13 +23,13 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 class JudgmentLight : PatternSkill(), Listener {
-    private val cooldownTick = 20L * 10
+    private val cooldownTick = 20L * 15
     private val previewDelayTick = 20L * 9 / 5 // 1.8 seconds
     private val rayCount = 8
     private val rayLength = 80.0
     private val rayStep = 0.2
     private val rayWidth = 0.5
-    private val previewRayWidth = 0.3
+    private val previewRayWidth = 0.1
     private val damageRatio = 0.5
     private val curseGaugeIncrease = 150
     private val attackMissDurationMillis = 5_000L
@@ -39,7 +39,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
     override val name: String = "심판의 빛"
     override val description: List<String> = listOf(
-        "<gray>10초마다 8갈래의 심판의 빛을 발사한다.",
+        "<gray>일정 시간마다 8갈래의 심판의 빛을 발사한다.",
         "<gray>피격 시 50% 피해를 입고, 일정 시간동안 빗나감 상태이상에 빠지며 태양의 저주 수치가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.END_ROD)
@@ -91,8 +91,8 @@ class JudgmentLight : PatternSkill(), Listener {
             z = -76.0
         }
 
-        val density = if (isPreview) 0.55 else 1.0
-        val offsetStep = if (isPreview) 0.25 else 0.12
+        val density = 0.55
+        val offsetStep = 0.25
         val renderRayWidth = if (isPreview) previewRayWidth else rayWidth
 
         directions.forEach { direction ->
