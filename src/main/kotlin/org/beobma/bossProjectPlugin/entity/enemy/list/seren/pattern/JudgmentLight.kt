@@ -28,6 +28,7 @@ class JudgmentLight : PatternSkill(), Listener {
     private val rayLength = 80.0
     private val rayStep = 0.2
     private val rayWidth = 0.5
+    private val previewRayWidth = 0.3
     private val damageRatio = 0.5
     private val curseGaugeIncrease = 150
     private val attackMissDurationMillis = 5_000L
@@ -91,6 +92,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
         val density = if (isPreview) 0.55 else 1.0
         val offsetStep = if (isPreview) 0.25 else 0.12
+        val renderRayWidth = if (isPreview) previewRayWidth else rayWidth
 
         directions.forEach { direction ->
             val side = Vector(-direction.z, 0.0, direction.x).normalize()
@@ -98,21 +100,27 @@ class JudgmentLight : PatternSkill(), Listener {
             while (traveled <= rayLength) {
                 val point = center.clone().add(direction.clone().multiply(traveled))
 
-                var offset = -rayWidth / 2
-                while (offset <= rayWidth / 2) {
-                    val sample = point.clone().add(side.clone().multiply(offset))
-                    world.spawnParticle(
-                        Particle.END_ROD,
-                        sample,
-                        1,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        null,
-                        true
-                    )
-                    offset += offsetStep
+                var sideOffset = -renderRayWidth / 2
+                while (sideOffset <= renderRayWidth / 2) {
+                    var yOffset = -renderRayWidth / 2
+                    while (yOffset <= renderRayWidth / 2) {
+                        val sample = point.clone()
+                            .add(side.clone().multiply(sideOffset))
+                            .add(0.0, yOffset, 0.0)
+                        world.spawnParticle(
+                            Particle.END_ROD,
+                            sample,
+                            1,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            null,
+                            true
+                        )
+                        yOffset += offsetStep
+                    }
+                    sideOffset += offsetStep
                 }
                 traveled += rayStep / density
             }
