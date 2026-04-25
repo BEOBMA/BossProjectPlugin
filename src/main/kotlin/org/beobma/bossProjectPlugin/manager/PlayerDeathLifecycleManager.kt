@@ -44,7 +44,7 @@ object PlayerDeathLifecycleManager : Listener {
 
     fun canBeTargetedByPattern(player: Player): Boolean {
         if (!player.isOnline || player.isDead) return false
-        if (player.gameMode != GameMode.SURVIVAL) return false
+        if (player.gameMode != GameMode.ADVENTURE) return false
         return !isRespawnInvulnerable(player)
     }
 
@@ -118,7 +118,7 @@ object PlayerDeathLifecycleManager : Listener {
             val remainText = remainingAfterDeath?.let { "<gray>(남은 데스카운트: $it)</gray>" } ?: ""
             player.sendMessage(
                 miniMessage.deserialize(
-                    "<yellow>30초 후 자동으로 부활합니다. <aqua>웅크리기(Shift)</aqua> 또는 <aqua>F</aqua> 키로 즉시 부활할 수 있습니다.</yellow> $remainText"
+                    "<yellow>30초 후 자동으로 부활합니다. <aqua>웅크리기(Shift)</aqua> 키로 즉시 부활할 수 있습니다.</yellow> $remainText"
                 )
             )
             return
@@ -149,7 +149,7 @@ object PlayerDeathLifecycleManager : Listener {
         clearPlayerState(uuid)
 
         val maxHealth = player.getAttribute(Attribute.MAX_HEALTH)?.value ?: 20.0
-        player.gameMode = GameMode.SURVIVAL
+        player.gameMode = GameMode.ADVENTURE
         player.teleport(location)
         player.health = maxHealth.coerceAtLeast(1.0)
         player.foodLevel = 20
@@ -158,7 +158,6 @@ object PlayerDeathLifecycleManager : Listener {
         player.fallDistance = 0f
 
         respawnInvulnerableUntilByPlayer[uuid] = System.currentTimeMillis() + RESPAWN_IMMUNE_MILLIS
-        player.sendMessage(miniMessage.deserialize("<green>부활했습니다. 3초 동안 무적입니다.</green>"))
     }
 
     private fun shouldEndBattleBecauseEveryoneIsEliminated(): Boolean {
