@@ -76,6 +76,10 @@ object GameManager : Listener {
         clearBossBar()
         PlayerDeathLifecycleManager.clearAllStates()
 
+        if (game.isBossInitialized) {
+            game.bossData.patternSkills.forEach { it.onGameEnd() }
+        }
+
         if (game.isBossInitialized && game.bossData.entity.isValid) {
             game.bossData.entity.remove()
         }
