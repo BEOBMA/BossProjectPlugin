@@ -46,8 +46,10 @@ class ChosenSerenData(
     override val mapData: BossBattleMapData = MAP_DATA
 
     override val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
-    override val interactionSummonCommand: String =
-        "/summon interaction 47.0 -35.57565 -76.0 {width:2f,height:3f,Tags:[\"boss_interaction\"]}"
+    override val interactionSummonCommands: List<String> = listOf(
+        "/summon interaction 47.0 -35.57565 -76.0 {width:2f,height:3f,Tags:[\"boss_interaction\"]}",
+        "/summon interaction 49.0 -35.57565 -76.0 {width:2f,height:3f,Tags:[\"boss_interaction\"]}"
+    )
     override fun createNextPhase(): EnemyData? {
         if (phase >= 2) return null
         return ChosenSerenData(initGame, phase + 1)

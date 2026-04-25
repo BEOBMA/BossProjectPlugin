@@ -20,21 +20,27 @@ abstract class EnemyData : EntityData() {
 
     open val interactionTag: String = BossCombatConstants.BOSS_INTERACTION_TAG
     open val interactionSummonCommand: String? = null
+    open val interactionSummonCommands: List<String>
+        get() = interactionSummonCommand?.let(::listOf) ?: emptyList()
     open fun createNextPhase(): EnemyData? = null
 
     protected fun resolveBossEntity(): Entity {
         val world = mapData.world()
-        interactionSummonCommand?.let { summonCommand ->
-            val summonTag = "${interactionTag}_${UUID.randomUUID().toString().replace("-", "")}"
-            val commandWithTag = appendSummonTag(summonCommand, summonTag)
-            Bukkit.dispatchCommand(
-                Bukkit.getConsoleSender(),
-                "execute in ${world.key.asString()} run ${commandWithTag.removePrefix("/")}"
-            )
+        if (interactionSummonCommands.isNotEmpty()) {
+            val summonTags = interactionSummonCommands.map { summonCommand ->
+                val summonTag = "${interactionTag}_${UUID.randomUUID().toString().replace("-", "")}"
+                val commandWithTag = appendSummonTag(summonCommand, summonTag)
+                Bukkit.dispatchCommand(
+                    Bukkit.getConsoleSender(),
+                    "execute in ${world.key.asString()} run ${commandWithTag.removePrefix("/")}"
+                )
+                summonTag
+            }
 
+            val mainSummonTag = summonTags.first()
             return world.entities.firstOrNull {
-                it.scoreboardTags.contains(interactionTag) && it.scoreboardTags.contains(summonTag)
-            } ?: error("새로 소환된 보스 엔티티 태그 '$summonTag' 를 월드 '${world.name}' 에서 찾지 못했습니다.")
+                it.scoreboardTags.contains(interactionTag) && it.scoreboardTags.contains(mainSummonTag)
+            } ?: error("새로 소환된 보스 엔티티 태그 '$mainSummonTag' 를 월드 '${world.name}' 에서 찾지 못했습니다.")
         }
 
         return world.entities.firstOrNull { it.scoreboardTags.contains(interactionTag) }
