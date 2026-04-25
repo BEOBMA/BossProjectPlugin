@@ -108,7 +108,10 @@ class MeteoriteOfLight : PatternSkill(), Listener {
         val world = enemyData.mapData.world()
         if (world.uid != spawnLocation.worldUid) return
 
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "function meteorite_of_light_${state.number}:_/create")
+        runFunctionWithCommandBlockMinecartAt(
+            spawnLocation,
+            "meteorite_of_light_${state.number}:_/create"
+        )
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "function meteorite_of_light_${state.number}:a/default/play_anim")
 
         val startedAt = System.currentTimeMillis()
@@ -185,6 +188,31 @@ class MeteoriteOfLight : PatternSkill(), Listener {
 
     private fun isMeteoriteDisplay(display: BlockDisplay, meteoriteNumber: Int): Boolean {
         return display.scoreboardTags.contains("meteorite_of_light_$meteoriteNumber")
+    }
+
+    private fun runFunctionWithCommandBlockMinecartAt(spawnLocation: SpawnLocation, functionId: String) {
+        val worldName = enemyData.mapData.world().name
+        val x = "%.3f".format(java.util.Locale.US, spawnLocation.x)
+        val y = "%.3f".format(java.util.Locale.US, spawnLocation.y)
+        val z = "%.3f".format(java.util.Locale.US, spawnLocation.z)
+        val summonCommand = buildString {
+            append("execute in ")
+            append(worldName)
+            append(" positioned ")
+            append(x)
+            append(" ")
+            append(y)
+            append(" ")
+            append(z)
+            append(" run summon command_block_minecart ~ ~ ~ {Command:\"function ")
+            append(functionId)
+            append("\"}")
+        }
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), summonCommand)
+        Bukkit.dispatchCommand(
+            Bukkit.getConsoleSender(),
+            "execute in $worldName positioned $x $y $z run kill @e[type=command_block_minecart,distance=..2,limit=1,sort=nearest]"
+        )
     }
 
     private fun pickSpawnLocation(reservedLocations: List<SpawnLocation>): SpawnLocation? {
