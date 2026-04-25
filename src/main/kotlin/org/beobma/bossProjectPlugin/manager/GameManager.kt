@@ -333,17 +333,25 @@ object GameManager : Listener {
     private fun initializeBossBar(game: Game) {
         clearBossBar()
         val created = Bukkit.createBossBar("", BarColor.RED, BarStyle.SOLID)
-        created.isVisible = true
         game.playerDatas
             .map { it.player }
             .filter { it.isOnline }
             .forEach { created.addPlayer(it) }
+        created.isVisible = true
         bossBar = created
         updateBossBar(game)
     }
 
     private fun updateBossBar(game: Game) {
         val targetBar = bossBar ?: return
+
+        game.playerDatas
+            .map { it.player }
+            .filter { it.isOnline }
+            .forEach { if (!targetBar.players.contains(it)) targetBar.addPlayer(it) }
+
+        targetBar.isVisible = true
+
         val progress = if (game.bossData.maxHealth <= 0.0) {
             0.0
         } else {
