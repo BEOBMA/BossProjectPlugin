@@ -14,6 +14,7 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.inventory.ItemStack
+import org.bukkit.scheduler.BukkitTask
 import org.bukkit.util.Vector
 import java.util.UUID
 import kotlin.math.PI
@@ -32,6 +33,7 @@ class JudgmentLight : PatternSkill(), Listener {
     private val damageRatio = 0.5
     private val curseGaugeIncrease = 150
     private val attackMissDurationMillis = 5_000L
+    private val strikeRenderDurationTick = 6L
 
     private val missUntilByPlayer: MutableMap<UUID, Long> = mutableMapOf()
     private var listenerRegistered = false
@@ -60,7 +62,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
         renderRays(directions, isPreview = true)
         BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
-            renderRays(directions, isPreview = false)
+            renderStrikeRays(directions)
             applyHitEffects(directions)
         }, previewDelayTick)
     }
@@ -129,6 +131,23 @@ class JudgmentLight : PatternSkill(), Listener {
         val pitch = if (isPreview) 1.6f else 0.9f
         val volume = if (isPreview) 0.3f else 0.7f
         world.playSound(center, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.MASTER, volume, pitch)
+    }
+
+    private fun renderStrikeRays(directions: List<Vector>) {
+        var elapsedTick = 0L
+        var task: BukkitTask? = null
+        task = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
+            BossProjectPlugin.instance,
+            Runnable {
+                renderRays(directions, isPreview = false)
+                elapsedTick++
+                if (elapsedTick >= strikeRenderDurationTick) {
+                    task?.cancel()
+                }
+            },
+            0L,
+            1L
+        )
     }
 
     private fun applyHitEffects(directions: List<Vector>) {
