@@ -24,6 +24,17 @@ abstract class EnemyData : EntityData() {
         get() = interactionSummonCommand?.let(::listOf) ?: emptyList()
     open fun createNextPhase(): EnemyData? = null
 
+    private var trackedInteractionEntityIds: Set<UUID> = emptySet()
+
+    fun interactionEntityIds(): Set<UUID> = trackedInteractionEntityIds
+
+    fun resolveInteractionEntities(): List<Entity> {
+        if (trackedInteractionEntityIds.isEmpty()) return emptyList()
+
+        val world = mapData.world()
+        return world.entities.filter { trackedInteractionEntityIds.contains(it.uniqueId) }
+    }
+
     protected fun resolveBossEntity(): Entity {
         val world = mapData.world()
         if (interactionSummonCommands.isNotEmpty()) {
@@ -37,14 +48,27 @@ abstract class EnemyData : EntityData() {
                 summonTag
             }
 
+            val resolvedEntities = summonTags.mapNotNull { summonTag ->
+                world.entities.firstOrNull {
+                    it.scoreboardTags.contains(interactionTag) && it.scoreboardTags.contains(summonTag)
+                }
+            }
+            trackedInteractionEntityIds = resolvedEntities.map { it.uniqueId }.toSet()
+
+            if (resolvedEntities.isEmpty()) {
+                error("새로 소환된 보스 엔티티 태그를 월드 '${world.name}' 에서 찾지 못했습니다.")
+            }
+
             val mainSummonTag = summonTags.first()
-            return world.entities.firstOrNull {
+            return resolvedEntities.firstOrNull {
                 it.scoreboardTags.contains(interactionTag) && it.scoreboardTags.contains(mainSummonTag)
             } ?: error("새로 소환된 보스 엔티티 태그 '$mainSummonTag' 를 월드 '${world.name}' 에서 찾지 못했습니다.")
         }
 
-        return world.entities.firstOrNull { it.scoreboardTags.contains(interactionTag) }
+        val resolvedEntity = world.entities.firstOrNull { it.scoreboardTags.contains(interactionTag) }
             ?: error("보스 엔티티 태그 '$interactionTag' 를 가진 엔티티를 월드 '${world.name}' 에서 찾지 못했습니다.")
+        trackedInteractionEntityIds = setOf(resolvedEntity.uniqueId)
+        return resolvedEntity
     }
 
     private fun appendSummonTag(command: String, summonTag: String): String {
