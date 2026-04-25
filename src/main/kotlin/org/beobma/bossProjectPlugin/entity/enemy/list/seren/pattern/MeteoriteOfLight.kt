@@ -191,13 +191,12 @@ class MeteoriteOfLight : PatternSkill(), Listener {
     }
 
     private fun runFunctionWithCommandBlockMinecartAt(spawnLocation: SpawnLocation, functionId: String) {
-        val worldName = enemyData.mapData.world().name
         val x = "%.3f".format(java.util.Locale.US, spawnLocation.x)
         val y = "%.3f".format(java.util.Locale.US, spawnLocation.y)
         val z = "%.3f".format(java.util.Locale.US, spawnLocation.z)
         val summonCommand = buildString {
             append("execute in ")
-            append(worldName)
+            append("minecraft:overworld")
             append(" positioned ")
             append(x)
             append(" ")
@@ -211,7 +210,7 @@ class MeteoriteOfLight : PatternSkill(), Listener {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), summonCommand)
         Bukkit.dispatchCommand(
             Bukkit.getConsoleSender(),
-            "execute in $worldName positioned $x $y $z run kill @e[type=command_block_minecart,distance=..2,limit=1,sort=nearest]"
+            "execute in minecraft:overworld positioned $x $y $z run kill @e[type=command_block_minecart,distance=..2,limit=1,sort=nearest]"
         )
     }
 
