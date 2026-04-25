@@ -40,10 +40,8 @@ class CurseOfSun : BossPassive(), Listener {
     private val preShiftWarningTicks = 20L * 3L
     private val phase2TransitionParticleDurationTicks = 20L * 5L
     private val phase2TransitionParticleIntervalTicks = 2L
-    private val phase2TransitionParticleCount = 10_000
-    private val phase2TransitionMarkerCenterX = 65.0
-    private val phase2TransitionMarkerCenterY = -24.0
-    private val phase2TransitionMarkerCenterZ = -113.0
+    private val phase2TransitionPostShiftMaintainTicks = 10L // 0.5s
+    private val phase2TransitionParticleCountPerPlayer = 450
     private val mapShiftDistanceX = 35.0
 
     private val defaultNoonTicks = 20L * 5L //20L * 120L
@@ -61,12 +59,6 @@ class CurseOfSun : BossPassive(), Listener {
     private val phase2MinZ = -127.5
     private val phase2MaxZ = -98.5
     private val laneCount = 4
-    private val phase2GlobalMinX = phase2MinX
-    private val phase2GlobalMaxX = phase2MaxX + mapShiftDistanceX * (laneCount - 1)
-    private val phase2GlobalCenterX = (phase2GlobalMinX + phase2GlobalMaxX) / 2.0
-    private val phase2GlobalCenterY = -31.0
-    private val phase2GlobalCenterZ = (phase2MinZ + phase2MaxZ) / 2.0
-
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
     private var listenerRegistered = false
@@ -300,8 +292,6 @@ class CurseOfSun : BossPassive(), Listener {
             player.sendMessage(miniMessage.deserialize("<yellow>[시간 전환]</yellow> <green>${safeZone.displayName}</green><gray>이(가) 안전지대입니다. 3초 안에 이동하세요.</gray>"))
         }
 
-        world.spawnParticle(Particle.END_ROD, safeZone.center(world), 80, 1.2, 0.8, 1.2, 0.0)
-
         BossProjectPlugin.instance.server.scheduler.runTaskLater(
             BossProjectPlugin.instance,
             Runnable {
@@ -335,11 +325,10 @@ class CurseOfSun : BossPassive(), Listener {
         phase2BlindnessTask?.cancel()
 
         val totalSteps = (phase2TransitionParticleDurationTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
+        val maintainSteps = (phase2TransitionPostShiftMaintainTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
         var step = 0
-        val center = Location(world, phase2TransitionMarkerCenterX, phase2TransitionMarkerCenterY, phase2TransitionMarkerCenterZ)
-        val spreadX = (phase2GlobalMaxX - phase2GlobalMinX) / 2.0
-        val spreadY = 13.0
-        val spreadZ = (phase2MaxZ - phase2MinZ) / 2.0
+        var transitionCompleted = false
+        var remainingMaintainSteps = maintainSteps
         val markerBlockData = Material.WHITE_CONCRETE.createBlockData()
 
         phase2BlindnessTask = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
@@ -351,13 +340,35 @@ class CurseOfSun : BossPassive(), Listener {
                     return@Runnable
                 }
 
-                world.spawnParticle(Particle.BLOCK_MARKER, center, phase2TransitionParticleCount, spreadX, spreadY, spreadZ, 0.0, markerBlockData)
+                world.players
+                    .asSequence()
+                    .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
+                    .forEach { player ->
+                        val eyeLocation = player.eyeLocation
+                        world.spawnParticle(
+                            Particle.BLOCK_MARKER,
+                            eyeLocation,
+                            phase2TransitionParticleCountPerPlayer,
+                            0.75,
+                            0.45,
+                            0.75,
+                            0.0,
+                            markerBlockData
+                        )
+                    }
 
                 step++
-                if (step > totalSteps) {
-                    phase2BlindnessTask?.cancel()
-                    phase2BlindnessTask = null
+                if (!transitionCompleted && step > totalSteps) {
+                    transitionCompleted = true
                     onCompleted()
+                }
+
+                if (transitionCompleted) {
+                    remainingMaintainSteps--
+                    if (remainingMaintainSteps <= 0) {
+                        phase2BlindnessTask?.cancel()
+                        phase2BlindnessTask = null
+                    }
                 }
             },
             0L,
