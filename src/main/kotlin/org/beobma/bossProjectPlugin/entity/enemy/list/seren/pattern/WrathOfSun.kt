@@ -4,6 +4,7 @@ import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
+import org.beobma.bossProjectPlugin.manager.PlayerDeathLifecycleManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Sound
@@ -79,7 +80,8 @@ class WrathOfSun : PatternSkill() {
                 val block = player.location.block
                 block.x in area.minX..area.maxX &&
                         block.z in area.minZ..area.maxZ &&
-                        block.y in area.floorY..(area.floorY + 2)
+                        block.y in area.floorY..(area.floorY + 2) &&
+                        !PlayerDeathLifecycleManager.isRespawnInvulnerable(player)
             }
             .forEach { player ->
                 player.damage(player.maxHealth * 0.4, enemyData.entity)

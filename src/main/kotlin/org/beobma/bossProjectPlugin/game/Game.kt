@@ -3,6 +3,7 @@ package org.beobma.bossProjectPlugin.game
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyData
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.entity.enemy.BossBattleMapData
+import org.beobma.bossProjectPlugin.entity.enemy.DeathCountMode
 import java.util.UUID
 
 class Game {
@@ -47,4 +48,25 @@ class Game {
     }
 
     fun playerDeathCount(uuid: UUID): Int = deathCountByPlayer[uuid] ?: 0
+
+    fun remainingDeaths(uuid: UUID): Int? {
+        val limit = mapData.deathLimit ?: return null
+        return when (mapData.deathCountMode) {
+            DeathCountMode.NONE -> null
+            DeathCountMode.PER_PLAYER -> (limit - playerDeathCount(uuid)).coerceAtLeast(0)
+            DeathCountMode.SHARED -> (limit - sharedDeathCount).coerceAtLeast(0)
+        }
+    }
+
+    fun consumeDeathIfAvailable(uuid: UUID): Boolean {
+        val remaining = remainingDeaths(uuid) ?: return true
+        if (remaining <= 0) return false
+
+        when (mapData.deathCountMode) {
+            DeathCountMode.NONE -> Unit
+            DeathCountMode.PER_PLAYER -> increasePlayerDeath(uuid)
+            DeathCountMode.SHARED -> increaseSharedDeath()
+        }
+        return true
+    }
 }

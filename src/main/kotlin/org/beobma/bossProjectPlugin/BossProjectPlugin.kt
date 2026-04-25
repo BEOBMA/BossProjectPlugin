@@ -6,6 +6,7 @@ import org.beobma.bossProjectPlugin.command.StartGameCommand
 import org.beobma.bossProjectPlugin.manager.BossInteractionDamageListener
 import org.beobma.bossProjectPlugin.manager.GameManager
 import org.beobma.bossProjectPlugin.manager.GameStartInvitationManager
+import org.beobma.bossProjectPlugin.manager.PlayerDeathLifecycleManager
 import org.bukkit.plugin.java.JavaPlugin
 
 class BossProjectPlugin : JavaPlugin() {
@@ -21,6 +22,7 @@ class BossProjectPlugin : JavaPlugin() {
         gameStartInvitationManager = GameStartInvitationManager(this)
         server.pluginManager.registerEvents(gameStartInvitationManager, this)
         server.pluginManager.registerEvents(BossInteractionDamageListener, this)
+        server.pluginManager.registerEvents(PlayerDeathLifecycleManager, this)
         getCommand("startgame")?.setExecutor(StartGameCommand(gameStartInvitationManager))
         getCommand("endgame")?.setExecutor(EndGameCommand())
         getCommand("bosspatterntest")?.setExecutor(BossPatternTestCommand())

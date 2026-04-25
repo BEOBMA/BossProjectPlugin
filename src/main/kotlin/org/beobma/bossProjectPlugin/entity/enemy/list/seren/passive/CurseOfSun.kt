@@ -3,6 +3,7 @@ package org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
+import org.beobma.bossProjectPlugin.manager.PlayerDeathLifecycleManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -54,6 +55,8 @@ class CurseOfSun : BossPassive(), Listener {
     }
 
     fun increaseGauge(player: Player, amount: Int) {
+        if (PlayerDeathLifecycleManager.isRespawnInvulnerable(player)) return
+
         val uuid = player.uniqueId
         val current = gaugeByPlayer[uuid] ?: 0
         val next = (current + amount).coerceIn(0, maxGauge)
