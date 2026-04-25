@@ -27,7 +27,8 @@ class JudgmentLight : PatternSkill(), Listener {
     private val rayCount = 8
     private val rayLength = 80.0
     private val rayStep = 0.2
-    private val rayWidth = 0.5
+    private val previewRayWidth = 0.3
+    private val firedRayWidth = 1.0
     private val damageRatio = 0.5
     private val curseGaugeIncrease = 150
     private val attackMissDurationMillis = 5_000L
@@ -90,29 +91,39 @@ class JudgmentLight : PatternSkill(), Listener {
         }
 
         val density = if (isPreview) 0.55 else 1.0
-        val offsetStep = if (isPreview) 0.25 else 0.12
+        val rayWidth = if (isPreview) previewRayWidth else firedRayWidth
+        val offsetStep = if (isPreview) 0.15 else 0.12
 
         directions.forEach { direction ->
             val side = Vector(-direction.z, 0.0, direction.x).normalize()
+            val up = Vector(0.0, 1.0, 0.0)
+
             var traveled = 0.0
             while (traveled <= rayLength) {
                 val point = center.clone().add(direction.clone().multiply(traveled))
 
-                var offset = -rayWidth / 2
-                while (offset <= rayWidth / 2) {
-                    val sample = point.clone().add(side.clone().multiply(offset))
-                    world.spawnParticle(
-                        Particle.END_ROD,
-                        sample,
-                        1,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        null,
-                        true
-                    )
-                    offset += offsetStep
+                var lateralOffset = -rayWidth / 2
+                while (lateralOffset <= rayWidth / 2) {
+                    var verticalOffset = -rayWidth / 2
+                    while (verticalOffset <= rayWidth / 2) {
+                        val sample = point.clone()
+                            .add(side.clone().multiply(lateralOffset))
+                            .add(up.clone().multiply(verticalOffset))
+
+                        world.spawnParticle(
+                            Particle.END_ROD,
+                            sample,
+                            1,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            null,
+                            true
+                        )
+                        verticalOffset += offsetStep
+                    }
+                    lateralOffset += offsetStep
                 }
                 traveled += rayStep / density
             }
@@ -134,7 +145,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
         world.players
             .filter { it.isOnline && !it.isDead }
-            .filter { isHitByAnyRay(it, center.toVector(), directions) }
+            .filter { isHitByAnyRay(it, center.toVector(), directions, firedRayWidth) }
             .forEach { player ->
                 player.damage(player.maxHealth * damageRatio, enemyData.entity)
                 curseOfSun?.increaseGauge(player, curseGaugeIncrease)
@@ -145,18 +156,20 @@ class JudgmentLight : PatternSkill(), Listener {
         world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.MASTER, 0.7f, 1.4f)
     }
 
-    private fun isHitByAnyRay(player: Player, center: Vector, directions: List<Vector>): Boolean {
+    private fun isHitByAnyRay(player: Player, center: Vector, directions: List<Vector>, rayWidth: Double): Boolean {
         val target = player.location.toVector()
-        if (abs(target.y - center.y) > 2.0) return false
 
         return directions.any { direction ->
             val relative = target.clone().subtract(center)
             val projection = relative.dot(direction)
             if (projection < 0.0 || projection > rayLength) return@any false
 
-            val closest = center.clone().add(direction.clone().multiply(projection))
-            val horizontalDistance = target.clone().setY(0).distance(closest.clone().setY(0))
-            horizontalDistance <= rayWidth / 2 + 0.15
+            val side = Vector(-direction.z, 0.0, direction.x).normalize()
+            val up = Vector(0.0, 1.0, 0.0)
+            val lateralDistance = abs(relative.dot(side))
+            val verticalDistance = abs(relative.dot(up))
+
+            lateralDistance <= rayWidth / 2 + 0.15 && verticalDistance <= rayWidth / 2 + 0.15
         }
     }
 
