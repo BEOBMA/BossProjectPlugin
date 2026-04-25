@@ -95,6 +95,10 @@ class MeteoriteOfLight : PatternSkill(), Listener {
         }
     }
 
+    override fun onGameEnd() {
+        cleanupAllMeteorites()
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerAttack(event: EntityDamageByEntityEvent) {
         val attacker = event.damager as? Player
@@ -170,6 +174,19 @@ class MeteoriteOfLight : PatternSkill(), Listener {
         state.activeStartedAtMillis = null
         state.activeSpawnLocation = null
         state.activeDisplayUuid = null
+    }
+
+    private fun cleanupAllMeteorites() {
+        meteoriteStates.forEach { state ->
+            state.hitCheckTask?.cancel()
+            state.hitCheckTask = null
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "function meteorite_of_light_${state.number}:_/delete")
+            state.pendingStartTick = null
+            state.pendingSpawnLocation = null
+            state.activeStartedAtMillis = null
+            state.activeSpawnLocation = null
+            state.activeDisplayUuid = null
+        }
     }
 
     private fun resolveDisplayEntity(

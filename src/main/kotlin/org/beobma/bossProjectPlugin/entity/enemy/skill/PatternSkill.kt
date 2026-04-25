@@ -42,6 +42,10 @@ abstract class PatternSkill {
         // default no-op
     }
 
+    open fun onGameEnd() {
+        // default no-op
+    }
+
     protected fun canUseOnCooldown(cooldownTicks: Long): Boolean {
         return enemyStatus.elapsedTicks - lastUsedTick >= cooldownTicks
     }
