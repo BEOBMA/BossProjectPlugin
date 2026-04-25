@@ -41,7 +41,7 @@ class LightArrow : PatternSkill() {
         "<gray>피격 시 5%의 피해를 입고 태양의 저주 수치가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.END_ROD)
-    override val validPhases: Set<Int> = setOf(2)
+    override val validPhases: Set<Int> = setOf(1)
 
     override fun canUse(): Boolean = canUseOnCooldown(cooldownTick)
 

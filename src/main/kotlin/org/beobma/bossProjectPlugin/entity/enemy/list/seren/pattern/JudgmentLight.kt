@@ -42,6 +42,7 @@ class JudgmentLight : PatternSkill(), Listener {
         "<gray>피격 시 50%의 피해를 입고, 일정 시간동안 빗나감 상태이상에 빠지며 태양의 저주 수치가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.END_ROD)
+    override val validPhases: Set<Int> = setOf(1)
 
     override fun inject(enemyData: org.beobma.bossProjectPlugin.entity.enemy.EnemyData) {
         super.inject(enemyData)

@@ -29,6 +29,7 @@ class CurseOfSun : BossPassive(), Listener {
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
     private var listenerRegistered = false
+    override val validPhases: Set<Int> = setOf(1)
 
     override val name: String = "태양의 저주"
     override val description: List<String> = listOf(
