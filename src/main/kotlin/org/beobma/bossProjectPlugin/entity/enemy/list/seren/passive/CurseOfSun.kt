@@ -329,17 +329,19 @@ class CurseOfSun : BossPassive(), Listener {
 
     private fun spawnSafeZoneParticles(world: org.bukkit.World, safeZone: SafeZone) {
         safeZone.forEachPoint(spacing = safeZoneParticleSpacing) { x, z ->
-            world.spawnParticle(
-                Particle.END_ROD,
-                x + 0.5,
-                safeZone.floorY + safeZoneParticleHeightOffset,
-                z + 0.5,
-                1,
-                0.0,
-                0.0,
-                0.0,
-                0.0
-            )
+            (0..3).forEach { laneOffset ->
+                world.spawnParticle(
+                    Particle.END_ROD,
+                    x + 0.5 + laneOffset * mapShiftDistanceX,
+                    safeZone.floorY + safeZoneParticleHeightOffset,
+                    z + 0.5,
+                    1,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                )
+            }
         }
     }
 
