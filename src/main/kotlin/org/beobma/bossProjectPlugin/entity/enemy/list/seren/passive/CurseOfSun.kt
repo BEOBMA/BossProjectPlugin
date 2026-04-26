@@ -49,10 +49,10 @@ class CurseOfSun : BossPassive(), Listener {
     private val safeZoneParticleSpacing = 1.0
     private val mapShiftDistanceX = 35.0
 
-    private val defaultNoonTicks = 20L * 5L //20L * 120L
-    private val defaultSunsetTicks = 20L * 130L
-    private val defaultMidnightTicks = 20L * 40L
-    private val defaultDawnTicks = 20L * 130L
+    private val defaultNoonTicks = 20L * 5L // 20L * 120L
+    private val defaultSunsetTicks = 20L * 5L // 20L * 130L
+    private val defaultMidnightTicks = 20L * 5L // 20L * 40L
+    private val defaultDawnTicks = 20L * 5L // 20L * 130L
     private val midnightDecreaseStepTicks = defaultMidnightTicks / 8L // 5s
     private val midnightIncreaseStepTicks = 20L * 5L
 
