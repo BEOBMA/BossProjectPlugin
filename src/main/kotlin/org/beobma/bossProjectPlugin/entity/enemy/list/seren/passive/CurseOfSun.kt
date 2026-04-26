@@ -64,6 +64,7 @@ class CurseOfSun : BossPassive(), Listener {
     private val phase2MinZ = -127.5
     private val phase2MaxZ = -98.5
     private val laneCount = 4
+    private val laneXOffsets: List<Double> = (0 until laneCount).map { it * mapShiftDistanceX }
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
     private var listenerRegistered = false
@@ -292,7 +293,15 @@ class CurseOfSun : BossPassive(), Listener {
 
         val safeZone = SafeZone.entries.random()
 
-        world.playSound(Location(world, 12.5, -34.0, -113.0), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.MASTER, 0.7f, 0.8f)
+        laneXOffsets.forEach { xOffset ->
+            world.playSound(
+                Location(world, 12.5 + xOffset, -34.0, -113.0),
+                Sound.BLOCK_BEACON_DEACTIVATE,
+                SoundCategory.MASTER,
+                0.7f,
+                0.8f
+            )
+        }
         world.players.forEach { player ->
             player.sendMessage(miniMessage.deserialize("<yellow>[시간 전환]</yellow> <green>${safeZone.displayName}</green><gray>이(가) 안전지대입니다. 3초 안에 이동하세요.</gray>"))
         }
@@ -309,7 +318,7 @@ class CurseOfSun : BossPassive(), Listener {
                     world.players
                         .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
                         .forEach { player ->
-                            if (!safeZone.contains(player.location)) {
+                            if (!safeZone.contains(player.location, laneXOffsets)) {
                                 game.consumeDeathIfAvailable(player.uniqueId)
                                 player.level = game.remainingDeaths(player.uniqueId) ?: player.level
                                 player.sendMessage(miniMessage.deserialize("<red>안전지대 밖에 있어 데스 카운트를 1 소모했습니다.</red>"))
@@ -533,10 +542,14 @@ class CurseOfSun : BossPassive(), Listener {
         ZONE_3("3구역", 14.5, -37.0, -127.5, 27.5, -25.0, -114.5),
         ZONE_4("4구역", -2.5, -37.0, -127.5, 11.5, -25.0, -114.5);
 
-        fun contains(location: Location): Boolean {
-            return location.x in minX..maxX &&
-                    location.y in minY..maxY &&
-                    location.z in minZ..maxZ
+        fun contains(location: Location, xOffsets: Iterable<Double>): Boolean {
+            if (location.y !in minY..maxY || location.z !in minZ..maxZ) return false
+
+            return xOffsets.any { offset ->
+                val shiftedMinX = minX + offset
+                val shiftedMaxX = maxX + offset
+                location.x in shiftedMinX..shiftedMaxX
+            }
         }
 
         fun center(world: org.bukkit.World): Location {
