@@ -42,6 +42,9 @@ class CurseOfSun : BossPassive(), Listener {
     private val phase2TransitionParticleIntervalTicks = 2L
     private val phase2TransitionPostShiftMaintainTicks = 10L // 0.5s
     private val phase2TransitionParticleCountPerPlayer = 450
+    private val phase2TransitionLaserSoundIntervalSteps = 2
+    private val phase2TransitionLaserSoundVolume = 0.33f
+    private val phase2TransitionLaserSoundPitch = 0.6f
     private val safeZoneParticleHeightOffset = 0.2
     private val safeZoneParticleSpacing = 1.0
     private val mapShiftDistanceX = 35.0
@@ -374,6 +377,16 @@ class CurseOfSun : BossPassive(), Listener {
                             0.0,
                             markerBlockData
                         )
+
+                        if (step % phase2TransitionLaserSoundIntervalSteps == 0) {
+                            player.playSound(
+                                player.location,
+                                Sound.ENTITY_GUARDIAN_ATTACK,
+                                SoundCategory.MASTER,
+                                phase2TransitionLaserSoundVolume,
+                                phase2TransitionLaserSoundPitch
+                            )
+                        }
                     }
 
                 step++
