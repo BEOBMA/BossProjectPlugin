@@ -287,26 +287,38 @@ class CurseOfSun : BossPassive(), Listener {
     }
 
     private fun executePreShiftEvent() {
-        val world = enemyData.mapData.world()
-        if (world.players.isEmpty()) return
+        val activePlayers = game.playerDatas
+            .asSequence()
+            .map { it.player }
+            .filter { it.isOnline }
+            .toList()
+        if (activePlayers.isEmpty()) return
 
         val safeZone = SafeZone.entries.random()
 
-        world.playSound(Location(world, 12.5, -34.0, -113.0), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.MASTER, 0.7f, 0.8f)
-        world.players.forEach { player ->
+        activePlayers
+            .map { it.world }
+            .distinct()
+            .forEach { world ->
+                world.playSound(Location(world, 12.5, -34.0, -113.0), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.MASTER, 0.7f, 0.8f)
+                spawnSafeZoneParticles(world, safeZone)
+            }
+
+        activePlayers.forEach { player ->
             player.sendMessage(miniMessage.deserialize("<yellow>[시간 전환]</yellow> <green>${safeZone.displayName}</green><gray>이(가) 안전지대입니다. 3초 안에 이동하세요.</gray>"))
         }
-        spawnSafeZoneParticles(world, safeZone)
 
         BossProjectPlugin.instance.server.scheduler.runTaskLater(
             BossProjectPlugin.instance,
             Runnable {
                 if (!isPhase2StillRunning()) return@Runnable
 
-                startPhase2TransitionParticle(world) {
+                startPhase2TransitionParticle {
                     if (!isPhase2StillRunning()) return@startPhase2TransitionParticle
 
-                    world.players
+                    game.playerDatas
+                        .asSequence()
+                        .map { it.player }
                         .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
                         .forEach { player ->
                             if (!safeZone.contains(player.location)) {
@@ -316,7 +328,9 @@ class CurseOfSun : BossPassive(), Listener {
                             }
                         }
 
-                    world.players
+                    game.playerDatas
+                        .asSequence()
+                        .map { it.player }
                         .filter { it.isOnline }
                         .forEach { shiftPlayerToNextLane(it) }
 
@@ -343,7 +357,7 @@ class CurseOfSun : BossPassive(), Listener {
         }
     }
 
-    private fun startPhase2TransitionParticle(world: org.bukkit.World, onCompleted: () -> Unit) {
+    private fun startPhase2TransitionParticle(onCompleted: () -> Unit) {
         phase2BlindnessTask?.cancel()
 
         val totalSteps = (phase2TransitionParticleDurationTicks / phase2TransitionParticleIntervalTicks).toInt().coerceAtLeast(1)
@@ -362,12 +376,13 @@ class CurseOfSun : BossPassive(), Listener {
                     return@Runnable
                 }
 
-                world.players
+                game.playerDatas
                     .asSequence()
+                    .map { it.player }
                     .filter { PlayerDeathLifecycleManager.canBeTargetedByPattern(it) }
                     .forEach { player ->
                         val eyeLocation = player.eyeLocation
-                        world.spawnParticle(
+                        player.world.spawnParticle(
                             Particle.BLOCK_MARKER,
                             eyeLocation,
                             phase2TransitionParticleCountPerPlayer,
