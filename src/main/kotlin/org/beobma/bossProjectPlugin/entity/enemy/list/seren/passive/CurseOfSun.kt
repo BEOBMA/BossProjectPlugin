@@ -534,9 +534,14 @@ class CurseOfSun : BossPassive(), Listener {
         ZONE_4("4구역", -2.5, -37.0, -127.5, 11.5, -25.0, -114.5);
 
         fun contains(location: Location): Boolean {
-            return location.x in minX..maxX &&
-                    location.y in minY..maxY &&
-                    location.z in minZ..maxZ
+            if (location.y !in minY..maxY || location.z !in minZ..maxZ) return false
+
+            val xOffsets = listOf(0.0, 35.0, 70.0, 105.0)
+            return xOffsets.any { offset ->
+                val shiftedMinX = minX + offset
+                val shiftedMaxX = maxX + offset
+                location.x in shiftedMinX..shiftedMaxX
+            }
         }
 
         fun center(world: org.bukkit.World): Location {
