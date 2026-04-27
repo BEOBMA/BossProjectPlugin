@@ -338,10 +338,10 @@ class CurseOfSun : BossPassive(), Listener {
                     player.world.spawnParticle(
                         Particle.BLOCK_MARKER,
                         player.eyeLocation,
-                        35,
-                        0.7,
-                        0.7,
-                        0.7,
+                        100,
+                        2.0,
+                        2.0,
+                        2.0,
                         0.0,
                         Material.WHITE_CONCRETE.createBlockData()
                     )
