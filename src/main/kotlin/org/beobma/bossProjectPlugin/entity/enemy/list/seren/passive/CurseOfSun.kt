@@ -315,6 +315,7 @@ class CurseOfSun : BossPassive(), Listener {
             players
                 .filter { player -> PlayerDeathLifecycleManager.canBeTargetedByPattern(player) && !currentZone.contains(player) }
                 .forEach { player ->
+                    increaseGauge(player, maxGauge)
                     PlayerDeathLifecycleManager.forceConsumeDeathCount(player)
                 }
             pendingPeriodTransition = true
