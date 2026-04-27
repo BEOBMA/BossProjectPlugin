@@ -271,15 +271,14 @@ class CurseOfSun : BossPassive(), Listener {
         }
 
         Bukkit.broadcast(miniMessage.deserialize("<yellow>안전 지대가 정해졌습니다! 3초 안에 이동하세요.</yellow>"))
-
-        BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, 20L * 3L) {
-            val zone = currentSafeZone ?: return@runTaskLater
+        BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
+            val zone = currentSafeZone ?: return@Runnable
             players
                 .filter { player -> PlayerDeathLifecycleManager.canBeTargetedByPattern(player) && !zone.contains(player) }
                 .forEach { player ->
                     PlayerDeathLifecycleManager.forceConsumeDeathCount(player, "안전 지대에 있지 않아 데스 카운트가 1 감소했습니다.")
                 }
-        }
+        }, 20L * 3L)
     }
 
     private fun initializeTimeBossBar() {
