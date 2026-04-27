@@ -31,8 +31,14 @@ class CurseOfSun : BossPassive(), Listener {
     companion object {
         private var timeBossBar: BossBar? = null
 
-        private const val BASE_MIDNIGHT_MILLIS = 40_000L
-        private const val BASE_DAWN_MILLIS = 130_000L
+        private const val NOON_DURATION_MILLIS = 120_000L
+        private const val SUNSET_DURATION_MILLIS = 130_000L
+        private const val MIDNIGHT_DURATION_MILLIS = 40_000L
+        private const val DAWN_DURATION_MILLIS = 130_000L
+        private const val PERIOD_ADJUSTMENT_MILLIS = 5_000L
+
+        private const val BASE_MIDNIGHT_MILLIS = MIDNIGHT_DURATION_MILLIS
+        private const val BASE_DAWN_MILLIS = DAWN_DURATION_MILLIS
         private const val MIDNIGHT_REDUCTION_PER_FULL_GAUGE = BASE_MIDNIGHT_MILLIS / 8L
 
         private fun clearTimeBossBar() {
@@ -47,8 +53,8 @@ class CurseOfSun : BossPassive(), Listener {
         val gaugeDelta: Int,
         val cloneCommand: String?
     ) {
-        NOON("정오", 120_000L, 2, "/clone 28 -25 -97 -3 -38 -128 31 -38 -92"),
-        SUNSET("석양", 130_000L, 1, "/clone 62 -25 -97 31 -38 -128 31 -38 -92"),
+        NOON("정오", NOON_DURATION_MILLIS, 2, "/clone 28 -25 -97 -3 -38 -128 31 -38 -92"),
+        SUNSET("석양", SUNSET_DURATION_MILLIS, 1, "/clone 62 -25 -97 31 -38 -128 31 -38 -92"),
         MIDNIGHT("자정", BASE_MIDNIGHT_MILLIS, -80, "/clone 96 -25 -97 65 -38 -128 31 -38 -92"),
         DAWN("여명", BASE_DAWN_MILLIS, 1, "/clone 130 -25 -97 99 -38 -128 31 -38 -92")
     }
@@ -218,8 +224,8 @@ class CurseOfSun : BossPassive(), Listener {
 
     private fun finishCurrentPeriodAndMoveNext() {
         if (allTargetPlayersGaugeNotFull()) {
-            maxMidnightMillis += 5_000L
-            maxDawnMillis = (maxDawnMillis - 5_000L).coerceAtLeast(0L)
+            maxMidnightMillis += PERIOD_ADJUSTMENT_MILLIS
+            maxDawnMillis = (maxDawnMillis - PERIOD_ADJUSTMENT_MILLIS).coerceAtLeast(0L)
         }
 
         currentTimePeriod = nextTimePeriod(currentTimePeriod)
