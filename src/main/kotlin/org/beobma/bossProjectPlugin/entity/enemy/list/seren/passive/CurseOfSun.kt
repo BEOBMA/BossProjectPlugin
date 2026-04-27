@@ -9,6 +9,7 @@ import org.beobma.bossProjectPlugin.manager.PlayerStatusEffectManager
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.Particle
+import org.bukkit.Sound
 import org.bukkit.boss.BarColor
 import org.bukkit.boss.BarStyle
 import org.bukkit.boss.BossBar
@@ -25,7 +26,10 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerSwapHandItemsEvent
 import org.bukkit.inventory.ItemStack
+import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
+import kotlin.math.ceil
+import kotlin.math.floor
 
 class CurseOfSun : BossPassive(), Listener {
     companion object {
@@ -78,7 +82,8 @@ class CurseOfSun : BossPassive(), Listener {
     private val maxGauge = 1000
     private val disabledMillis = 5_000L
     private val naturalGaugeTickMillis = 1_080L
-    private val safeZoneWarningMillis = 3_000L
+    private val safeZoneDecisionDelayMillis = 3_000L
+    private val timeChangeDelayAfterPenaltyMillis = 5_000L
 
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
@@ -99,6 +104,9 @@ class CurseOfSun : BossPassive(), Listener {
     private var maxDawnMillis: Long = BASE_DAWN_MILLIS
     private var safeZonePrepared = false
     private var currentSafeZone: SafeZone? = null
+    private var pendingPeriodTransition = false
+    private var pendingTransitionMillis = 0L
+    private var transitionEffectTask: BukkitTask? = null
 
     override val validPhases: Set<Int> = setOf(1, 2)
 
@@ -136,6 +144,15 @@ class CurseOfSun : BossPassive(), Listener {
             .forEach { player ->
                 player.sendActionBar(buildActionBarText(player.uniqueId))
             }
+    }
+
+    override fun onGameEnd() {
+        clearTimeBossBar()
+        clearTransitionEffects()
+        safeZonePrepared = false
+        currentSafeZone = null
+        pendingPeriodTransition = false
+        pendingTransitionMillis = 0L
     }
 
     fun increaseGauge(player: Player, amount: Int) {
@@ -176,6 +193,9 @@ class CurseOfSun : BossPassive(), Listener {
                 naturalGaugeElapsedMillis = 0L
                 safeZonePrepared = false
                 currentSafeZone = null
+                pendingPeriodTransition = false
+                pendingTransitionMillis = 0L
+                clearTransitionEffects()
                 initializeTimeBossBar()
                 updateTimeBossBar()
             }
@@ -189,17 +209,22 @@ class CurseOfSun : BossPassive(), Listener {
             applyNaturalGaugeByTimePeriod()
         }
 
+        if (pendingPeriodTransition) {
+            pendingTransitionMillis += 1_000L
+            if (pendingTransitionMillis >= timeChangeDelayAfterPenaltyMillis) {
+                clearTransitionEffects()
+                finishCurrentPeriodAndMoveNext()
+            }
+            updateTimeBossBar()
+            return
+        }
+
         currentTimePeriodElapsedMillis += 1_000L
 
         val currentDuration = currentTimePeriodDurationMillis()
-        val warningStartMillis = (currentDuration - safeZoneWarningMillis).coerceAtLeast(0L)
-        if (!safeZonePrepared && currentTimePeriodElapsedMillis >= warningStartMillis) {
+        if (!safeZonePrepared && currentTimePeriodElapsedMillis >= currentDuration) {
             prepareSafeZoneForNextTransition()
             safeZonePrepared = true
-        }
-
-        if (currentTimePeriodElapsedMillis >= currentDuration) {
-            finishCurrentPeriodAndMoveNext()
         }
 
         updateTimeBossBar()
@@ -232,6 +257,8 @@ class CurseOfSun : BossPassive(), Listener {
         currentTimePeriodElapsedMillis = 0L
         safeZonePrepared = false
         currentSafeZone = null
+        pendingPeriodTransition = false
+        pendingTransitionMillis = 0L
         executeCloneCommand(currentTimePeriod.cloneCommand)
         updateTimeBossBar()
     }
@@ -260,31 +287,75 @@ class CurseOfSun : BossPassive(), Listener {
     private fun prepareSafeZoneForNextTransition() {
         currentSafeZone = safeZones.random()
         val players = game.playerDatas.map { it.player }.filter { it.isOnline }
+        val zone = currentSafeZone ?: return
+        val world = players.firstOrNull()?.world ?: return
 
-        players.forEach { player ->
-            repeat(150) {
-                player.world.spawnParticle(
-                    Particle.BLOCK_MARKER,
-                    player.location,
-                    1,
-                    0.25,
-                    1.0,
-                    0.25,
-                    0.0,
-                    Material.WHITE_CONCRETE.createBlockData()
+        for (x in ceil(zone.minX).toInt()..floor(zone.maxX).toInt()) {
+            for (z in ceil(zone.minZ).toInt()..floor(zone.maxZ).toInt()) {
+                world.spawnParticle(
+                    Particle.END_ROD,
+                    x + 0.5,
+                    zone.minY + 0.1,
+                    z + 0.5,
+                    8,
+                    0.05,
+                    0.03,
+                    0.05,
+                    0.0
                 )
             }
         }
 
         Bukkit.broadcast(miniMessage.deserialize("<yellow>안전 지대가 정해졌습니다! 3초 안에 이동하세요.</yellow>"))
         BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
-            val zone = currentSafeZone ?: return@Runnable
+            val currentZone = currentSafeZone ?: return@Runnable
             players
-                .filter { player -> PlayerDeathLifecycleManager.canBeTargetedByPattern(player) && !zone.contains(player) }
+                .filter { player -> PlayerDeathLifecycleManager.canBeTargetedByPattern(player) && !currentZone.contains(player) }
                 .forEach { player ->
                     PlayerDeathLifecycleManager.forceConsumeDeathCount(player, "안전 지대에 있지 않아 데스 카운트가 1 감소했습니다.")
                 }
-        }, 20L * 3L)
+            pendingPeriodTransition = true
+            pendingTransitionMillis = 0L
+            startTransitionEffects()
+        }, safeZoneDecisionDelayMillis / 50L)
+    }
+
+    private fun startTransitionEffects() {
+        clearTransitionEffects()
+        transitionEffectTask = BossProjectPlugin.instance.server.scheduler.runTaskTimer(
+            BossProjectPlugin.instance,
+            Runnable {
+                if (!pendingPeriodTransition) {
+                    clearTransitionEffects()
+                    return@Runnable
+                }
+                val players = game.playerDatas
+                    .asSequence()
+                    .map { it.player }
+                    .filter { it.isOnline }
+                    .toList()
+                players.forEach { player ->
+                    player.world.spawnParticle(
+                        Particle.BLOCK_MARKER,
+                        player.eyeLocation,
+                        35,
+                        0.7,
+                        0.7,
+                        0.7,
+                        0.0,
+                        Material.WHITE_CONCRETE.createBlockData()
+                    )
+                    player.playSound(player.location, Sound.ENTITY_GUARDIAN_ATTACK, 0.55f, 1.65f)
+                }
+            },
+            0L,
+            2L
+        )
+    }
+
+    private fun clearTransitionEffects() {
+        transitionEffectTask?.cancel()
+        transitionEffectTask = null
     }
 
     private fun initializeTimeBossBar() {
