@@ -87,6 +87,7 @@ object GameManager : Listener {
 
         if (game.isBossInitialized) {
             game.bossData.patternSkills.forEach { it.onGameEnd() }
+            game.bossData.passives.forEach { it.onGameEnd() }
         }
 
         if (game.isBossInitialized && game.bossData.entity.isValid) {
