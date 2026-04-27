@@ -52,6 +52,29 @@ object PlayerDeathLifecycleManager : Listener {
         return !isRespawnInvulnerable(player)
     }
 
+    fun forceConsumeDeathCount(player: Player, reason: String? = null): Boolean {
+        val game = GameManager.getCurrentGame() ?: return false
+        val uuid = player.uniqueId
+
+        if (!game.consumeDeathIfAvailable(uuid)) {
+            player.gameMode = GameMode.SPECTATOR
+            reason?.let { player.sendMessage(miniMessage.deserialize("<red>$it</red>")) }
+            player.sendMessage(miniMessage.deserialize("<red>데스카운트를 모두 소모하여 관전자 모드로 전환됩니다.</red>"))
+            if (shouldEndBattleBecauseEveryoneIsEliminated()) {
+                GameManager.terminateCurrentGame("모든 플레이어가 데스카운트를 소진했습니다.")
+            }
+            return false
+        }
+
+        val remaining = game.remainingDeaths(uuid)
+        player.level = remaining ?: 0
+        reason?.let {
+            val remainText = remaining?.let { remain -> " <gray>(남은 데스카운트: $remain)</gray>" } ?: ""
+            player.sendMessage(miniMessage.deserialize("<yellow>$it</yellow>$remainText"))
+        }
+        return true
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerDamaged(event: EntityDamageEvent) {
         val player = event.entity as? Player ?: return
