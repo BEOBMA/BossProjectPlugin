@@ -88,10 +88,10 @@ class CurseOfSun : BossPassive(), Listener {
     private val miniMessage = MiniMessage.miniMessage()
     private val gaugeByPlayer: MutableMap<UUID, Int> = mutableMapOf()
     private val safeZones: List<SafeZone> = listOf(
-        SafeZone(-2.5, -37.0, -111.5, 11.5, -25.0, -98.5),
-        SafeZone(14.5, -37.0, -111.5, 27.5, -25.0, -98.5),
-        SafeZone(14.5, -37.0, -127.5, 27.5, -25.0, -114.5),
-        SafeZone(-2.5, -37.0, -127.5, 11.5, -25.0, -114.5)
+        SafeZone(48.5, -37.0, -75.5, 61.5, -25.0, -62.5),
+        SafeZone(32.5, -37.0, -75.5, 45.5, -25.0, -62.5),
+        SafeZone(32.5, -37.0, -91.5, 45.5, -25.0, -78.5),
+        SafeZone(48.5, -37.0, -91.5, 61.5, -25.0, -78.5)
     )
 
     private var listenerRegistered = false
