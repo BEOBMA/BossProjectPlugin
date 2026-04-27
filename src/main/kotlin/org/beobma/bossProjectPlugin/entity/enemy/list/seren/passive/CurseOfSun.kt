@@ -31,10 +31,10 @@ class CurseOfSun : BossPassive(), Listener {
     companion object {
         private var timeBossBar: BossBar? = null
 
-        private const val NOON_DURATION_MILLIS = 120_000L
-        private const val SUNSET_DURATION_MILLIS = 130_000L
-        private const val MIDNIGHT_DURATION_MILLIS = 40_000L
-        private const val DAWN_DURATION_MILLIS = 130_000L
+        private const val NOON_DURATION_MILLIS = 10_000L // 120_000L
+        private const val SUNSET_DURATION_MILLIS = 10_000L // 130_000L
+        private const val MIDNIGHT_DURATION_MILLIS = 10_000L // 40_000L
+        private const val DAWN_DURATION_MILLIS = 10_000L // 130_000L
         private const val PERIOD_ADJUSTMENT_MILLIS = 5_000L
 
         private const val BASE_MIDNIGHT_MILLIS = MIDNIGHT_DURATION_MILLIS
