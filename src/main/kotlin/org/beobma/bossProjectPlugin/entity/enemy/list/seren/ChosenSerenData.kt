@@ -46,7 +46,7 @@ class ChosenSerenData(
     override val game: Game = initGame
     override val status: EntityStatus = ChosenSerenStatus()
 
-    override val maxHealth: Double = if (phase == 1) 1000.0 else 6000.0
+    override val maxHealth: Double = if (phase == 1) 1.0 else 6000.0
     override var health: Double = maxHealth
     override val displayName: String = "선택받은 세렌"
 
