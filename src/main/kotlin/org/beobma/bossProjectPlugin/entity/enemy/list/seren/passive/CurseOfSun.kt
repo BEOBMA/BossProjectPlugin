@@ -55,12 +55,13 @@ class CurseOfSun : BossPassive(), Listener {
         val displayName: String,
         val defaultDurationMillis: Long,
         val gaugeDelta: Int,
-        val cloneCommand: String?
+        val cloneCommand: String?,
+        val minecraftTime: Long
     ) {
-        NOON("정오", NOON_DURATION_MILLIS, 2, "/clone 28 -25 -97 -3 -38 -128 31 -38 -92"),
-        SUNSET("석양", SUNSET_DURATION_MILLIS, 1, "/clone 62 -25 -97 31 -38 -128 31 -38 -92"),
-        MIDNIGHT("자정", BASE_MIDNIGHT_MILLIS, -80, "/clone 96 -25 -97 65 -38 -128 31 -38 -92"),
-        DAWN("여명", BASE_DAWN_MILLIS, 1, "/clone 130 -25 -97 99 -38 -128 31 -38 -92")
+        NOON("정오", NOON_DURATION_MILLIS, 2, "/clone 28 -25 -97 -3 -38 -128 31 -38 -92", 6_000L),
+        SUNSET("석양", SUNSET_DURATION_MILLIS, 1, "/clone 62 -25 -97 31 -38 -128 31 -38 -92", 12_000L),
+        MIDNIGHT("자정", BASE_MIDNIGHT_MILLIS, -80, "/clone 96 -25 -97 65 -38 -128 31 -38 -92", 18_000L),
+        DAWN("여명", BASE_DAWN_MILLIS, 1, "/clone 130 -25 -97 99 -38 -128 31 -38 -92", 23_000L)
     }
 
     private data class SafeZone(
@@ -197,6 +198,7 @@ class CurseOfSun : BossPassive(), Listener {
                 pendingTransitionMillis = 0L
                 clearTransitionEffects()
                 initializeTimeBossBar()
+                applyMinecraftTimeForCurrentPeriod()
                 updateTimeBossBar()
             }
         }
@@ -260,6 +262,7 @@ class CurseOfSun : BossPassive(), Listener {
         pendingPeriodTransition = false
         pendingTransitionMillis = 0L
         executeCloneCommand(currentTimePeriod.cloneCommand)
+        applyMinecraftTimeForCurrentPeriod()
         updateTimeBossBar()
     }
 
@@ -381,6 +384,16 @@ class CurseOfSun : BossPassive(), Listener {
     private fun executeCloneCommand(command: String?) {
         if (command.isNullOrBlank()) return
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.removePrefix("/"))
+    }
+
+    private fun applyMinecraftTimeForCurrentPeriod() {
+        val players = game.playerDatas
+            .asSequence()
+            .map { it.player }
+            .filter { it.isOnline }
+            .toList()
+        val world = players.firstOrNull()?.world ?: return
+        world.time = currentTimePeriod.minecraftTime
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
