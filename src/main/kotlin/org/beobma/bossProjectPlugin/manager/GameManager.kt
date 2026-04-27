@@ -103,6 +103,8 @@ object GameManager : Listener {
 
         currentGame = null
 
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "time set noon")
+
         if (broadcast) {
             Bukkit.broadcast(miniMessage.deserialize("<red>진행 중인 게임이 종료되었습니다: $reason</red>"))
         }
