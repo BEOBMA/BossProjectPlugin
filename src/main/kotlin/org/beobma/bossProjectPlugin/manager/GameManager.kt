@@ -3,6 +3,7 @@ package org.beobma.bossProjectPlugin.manager
 import net.kyori.adventure.text.minimessage.MiniMessage
 import org.beobma.bossProjectPlugin.BossProjectPlugin
 import org.beobma.bossProjectPlugin.entity.enemy.EnemyStatus
+import org.beobma.bossProjectPlugin.entity.enemy.list.seren.ChosenSerenData
 import org.beobma.bossProjectPlugin.entity.player.PlayerData
 import org.beobma.bossProjectPlugin.game.Game
 import org.beobma.bossProjectPlugin.entity.enemy.list.EnemyRegistry
@@ -47,6 +48,8 @@ object GameManager : Listener {
     private var bossBar: BossBar? = null
     private var patternOnlyTestMode: Boolean = false
     private var phaseTransitioning: Boolean = false
+    private var cinematicActive: Boolean = false
+    private var cinematicTask: BukkitTask? = null
 
     private val miniMessage = MiniMessage.miniMessage()
 
@@ -78,6 +81,9 @@ object GameManager : Listener {
         phaseTransitionTask?.cancel()
         phaseTransitionTask = null
         phaseTransitioning = false
+        cinematicTask?.cancel()
+        cinematicTask = null
+        cinematicActive = false
         bossLoopTask?.cancel()
         bossLoopTask = null
         clearBossBar()
@@ -257,7 +263,7 @@ object GameManager : Listener {
                 status?.let { it.elapsedTicks += 20L }
                 updateBossBar(game)
 
-                if (phaseTransitioning) return
+                if (phaseTransitioning || cinematicActive) return
 
                 if (!patternOnlyTestMode) {
                     game.bossData.passives.forEach { it.onTick() }
@@ -286,6 +292,40 @@ object GameManager : Listener {
             .filter { it.isOnline }
             .forEach { it.isInvulnerable = true }
 
+        val moveToNextPhase = Runnable {
+            if (currentGame !== game) return@Runnable
+
+            game.carryOverDeathState(nextPhaseBoss.mapData)
+            game.setupMap(nextPhaseBoss.mapData)
+            game.setupBoss(nextPhaseBoss)
+            game.playerDatas
+                .map { it.player }
+                .filter { it.isOnline }
+                .forEach { player ->
+                    player.teleport(nextPhaseBoss.mapData.spawnLocation())
+                    player.isInvulnerable = false
+                }
+
+            initializeBossBar(game)
+            phaseTransitioning = false
+            phaseTransitionTask = null
+        }
+
+        val isSerenPhaseOneToTwo = clearedBoss is ChosenSerenData &&
+            nextPhaseBoss is ChosenSerenData &&
+            clearedBoss.phase == 1 &&
+            nextPhaseBoss.phase == 2
+
+        if (isSerenPhaseOneToTwo) {
+            runTypedSubtitleCinematic(
+                "태양의 불꽃은 복수를 잊지 않는다.",
+                postDelayTicks = 60L
+            ) {
+                moveToNextPhase.run()
+            }
+            return
+        }
+
         Bukkit.broadcast(
             miniMessage.deserialize(
                 "<gold>${clearedBoss.displayName} ${clearedBoss.phase}페이즈 종료!</gold> <yellow>5초 후 ${nextPhaseBoss.phase}페이즈를 시작합니다.</yellow>"
@@ -295,33 +335,89 @@ object GameManager : Listener {
         phaseTransitionTask?.cancel()
         phaseTransitionTask = object : BukkitRunnable() {
             override fun run() {
-                if (currentGame !== game) {
+                moveToNextPhase.run()
+                if (currentGame === game) {
+                    Bukkit.broadcast(
+                        miniMessage.deserialize(
+                            "<red>${nextPhaseBoss.phase}페이즈 시작!</red>"
+                        )
+                    )
+                }
+            }
+        }.runTaskLater(BossProjectPlugin.instance, PHASE_TRANSITION_DELAY_TICKS)
+    }
+
+    fun runTypedSubtitleCinematic(
+        message: String,
+        postDelayTicks: Long = 60L,
+        onComplete: () -> Unit
+    ) {
+        val game = currentGame ?: return
+        cinematicTask?.cancel()
+        cinematicTask = null
+        cinematicActive = true
+
+        val players = game.playerDatas
+            .map { it.player }
+            .filter { it.isOnline }
+
+        val perCharacterTicks = 2L
+        val typingTicks = (message.length * perCharacterTicks).coerceAtLeast(1L)
+        val totalRestrictMillis = (typingTicks + postDelayTicks) * 50L
+
+        players.forEach { player ->
+            player.isInvulnerable = true
+            PlayerStatusEffectManager.apply(
+                player.uniqueId,
+                PlayerStatusEffectManager.Effect.ACTION_RESTRICTED,
+                totalRestrictMillis
+            )
+        }
+
+        var index = 0
+        phaseTransitionTask?.cancel()
+        phaseTransitionTask = object : BukkitRunnable() {
+            override fun run() {
+                val activeGame = currentGame
+                if (activeGame !== game) {
+                    phaseTransitionTask = null
+                    cinematicTask = null
+                    cinematicActive = false
                     cancel()
                     return
                 }
 
-                game.carryOverDeathState(nextPhaseBoss.mapData)
-                game.setupMap(nextPhaseBoss.mapData)
-                game.setupBoss(nextPhaseBoss)
-                game.playerDatas
-                    .map { it.player }
-                    .filter { it.isOnline }
-                    .forEach { player ->
-                        player.teleport(nextPhaseBoss.mapData.spawnLocation())
-                        player.isInvulnerable = false
-                    }
-
-                initializeBossBar(game)
-                phaseTransitioning = false
-                phaseTransitionTask = null
-
-                Bukkit.broadcast(
-                    miniMessage.deserialize(
-                        "<red>${nextPhaseBoss.phase}페이즈 시작!</red>"
+                if (index >= message.length) {
+                    phaseTransitionTask = null
+                    cancel()
+                    cinematicTask = BossProjectPlugin.instance.server.scheduler.runTaskLater(
+                        BossProjectPlugin.instance,
+                        Runnable {
+                            if (currentGame !== game) {
+                                cinematicTask = null
+                                cinematicActive = false
+                                return@Runnable
+                            }
+                            onComplete()
+                            if (currentGame === game) {
+                                cinematicActive = false
+                                cinematicTask = null
+                            }
+                        },
+                        postDelayTicks
                     )
-                )
+                    return
+                }
+
+                index++
+                val typed = message.substring(0, index)
+                players.forEach { player ->
+                    if (player.isOnline) {
+                        player.sendTitle("", typed, 0, 40, 0)
+                    }
+                }
             }
-        }.runTaskLater(BossProjectPlugin.instance, PHASE_TRANSITION_DELAY_TICKS)
+        }.runTaskTimer(BossProjectPlugin.instance, 0L, perCharacterTicks)
     }
 
     private fun clearPlayerInvulnerability(game: Game) {

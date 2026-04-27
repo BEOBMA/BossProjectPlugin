@@ -108,6 +108,7 @@ class CurseOfSun : BossPassive(), Listener {
     private var pendingPeriodTransition = false
     private var pendingTransitionMillis = 0L
     private var transitionEffectTask: BukkitTask? = null
+    private var midnightExpired = false
 
     override val validPhases: Set<Int> = setOf(1, 2)
 
@@ -154,6 +155,7 @@ class CurseOfSun : BossPassive(), Listener {
         currentSafeZone = null
         pendingPeriodTransition = false
         pendingTransitionMillis = 0L
+        midnightExpired = false
     }
 
     fun increaseGauge(player: Player, amount: Int) {
@@ -175,8 +177,9 @@ class CurseOfSun : BossPassive(), Listener {
         if (enemyData.phase == 2) {
             maxMidnightMillis = (maxMidnightMillis - MIDNIGHT_REDUCTION_PER_FULL_GAUGE).coerceAtLeast(0L)
             maxDawnMillis += MIDNIGHT_REDUCTION_PER_FULL_GAUGE
+            Bukkit.broadcast(miniMessage.deserialize("<red>태양이 강해져 빛을 잃는 시간이 감소됩니다.</red>"))
             if (maxMidnightMillis <= 0L) {
-                GameManager.terminateCurrentGame("자정 시간이 모두 소진되어 전투에서 패배했습니다.")
+                triggerMidnightExpiredCinematic()
             }
         }
     }
@@ -200,6 +203,7 @@ class CurseOfSun : BossPassive(), Listener {
                 initializeTimeBossBar()
                 applyMinecraftTimeForCurrentPeriod()
                 updateTimeBossBar()
+                broadcastCurrentPeriodStartMessage()
             }
         }
     }
@@ -253,6 +257,7 @@ class CurseOfSun : BossPassive(), Listener {
         if (allTargetPlayersGaugeNotFull()) {
             maxMidnightMillis += PERIOD_ADJUSTMENT_MILLIS
             maxDawnMillis = (maxDawnMillis - PERIOD_ADJUSTMENT_MILLIS).coerceAtLeast(0L)
+            Bukkit.broadcast(miniMessage.deserialize("<green>태양이 강해지지 않아 빛을 잃는 시간이 증가합니다.</green>"))
         }
 
         currentTimePeriod = nextTimePeriod(currentTimePeriod)
@@ -264,6 +269,7 @@ class CurseOfSun : BossPassive(), Listener {
         executeCloneCommand(currentTimePeriod.cloneCommand)
         applyMinecraftTimeForCurrentPeriod()
         updateTimeBossBar()
+        broadcastCurrentPeriodStartMessage()
     }
 
     private fun nextTimePeriod(current: TimePeriod): TimePeriod = when (current) {
@@ -309,7 +315,7 @@ class CurseOfSun : BossPassive(), Listener {
             }
         }
 
-        Bukkit.broadcast(miniMessage.deserialize("<red><bold>시간이 흐르고 태양 또한 정해진 순환에 따라 변화합니다.</red>"))
+        Bukkit.broadcast(miniMessage.deserialize("<yellow>시간이 흐르고 태양 또한 정해진 순환에 따라 변화합니다.</yellow>"))
         BossProjectPlugin.instance.server.scheduler.runTaskLater(BossProjectPlugin.instance, Runnable {
             val currentZone = currentSafeZone ?: return@Runnable
             players
@@ -360,6 +366,27 @@ class CurseOfSun : BossPassive(), Listener {
     private fun clearTransitionEffects() {
         transitionEffectTask?.cancel()
         transitionEffectTask = null
+    }
+
+    private fun triggerMidnightExpiredCinematic() {
+        if (midnightExpired) return
+        midnightExpired = true
+        clearTransitionEffects()
+        pendingPeriodTransition = false
+        pendingTransitionMillis = 0L
+        GameManager.runTypedSubtitleCinematic("태양이 지지 않는다면 누구도 나에게 대항할 수 없다.", postDelayTicks = 60L) {
+            GameManager.terminateCurrentGame("자정 시간이 완전히 소멸했습니다.")
+        }
+    }
+
+    private fun broadcastCurrentPeriodStartMessage() {
+        val message = when (currentTimePeriod) {
+            TimePeriod.NOON -> "태양의 빛으로 가득찬 정오가 시작됩니다."
+            TimePeriod.SUNSET -> "황혼의 불타는 듯한 석양이 회복 효율을 낮추고 지속적으로 피해를 입힙니다."
+            TimePeriod.MIDNIGHT -> "태양이 저물어 빛을 잃고 자정이 시작됩니다."
+            TimePeriod.DAWN -> "태양이 서서히 떠올라 빛과 희망이 시작되는 여명이 다가옵니다."
+        }
+        Bukkit.broadcast(miniMessage.deserialize("<yellow>$message</yellow>"))
     }
 
     private fun initializeTimeBossBar() {
