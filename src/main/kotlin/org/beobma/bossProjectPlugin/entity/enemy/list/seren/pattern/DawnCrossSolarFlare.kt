@@ -72,7 +72,7 @@ class DawnCrossSolarFlare : PatternSkill() {
                 }
                 startAttackCycle()
             },
-            0L,
+            cycleIntervalTick,
             cycleIntervalTick
         )
     }

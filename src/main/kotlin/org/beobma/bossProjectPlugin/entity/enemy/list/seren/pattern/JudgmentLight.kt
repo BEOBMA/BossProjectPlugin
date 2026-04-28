@@ -46,6 +46,7 @@ class JudgmentLight : PatternSkill(), Listener {
 
     override fun inject(enemyData: org.beobma.bossProjectPlugin.entity.enemy.EnemyData) {
         super.inject(enemyData)
+        markUsedNow()
         if (listenerRegistered) return
         Bukkit.getPluginManager().registerEvents(this, BossProjectPlugin.instance)
         listenerRegistered = true
