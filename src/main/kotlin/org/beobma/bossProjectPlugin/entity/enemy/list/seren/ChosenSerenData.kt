@@ -9,6 +9,7 @@ import org.beobma.bossProjectPlugin.entity.enemy.list.seren.passive.CurseOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.DawnCrossSolarFlare
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.JudgmentLight
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.LightArrow
+import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.MitrasFlame
 import org.beobma.bossProjectPlugin.entity.enemy.list.seren.pattern.WrathOfSun
 import org.beobma.bossProjectPlugin.entity.enemy.skill.BossPassive
 import org.beobma.bossProjectPlugin.entity.enemy.skill.PatternSkill
@@ -45,7 +46,8 @@ class ChosenSerenData(
         WrathOfSun(),
         JudgmentLight(),
         LightArrow(),
-        DawnCrossSolarFlare()
+        DawnCrossSolarFlare(),
+        MitrasFlame()
     )
     override val mapData: BossBattleMapData = PHASE_MAP_DATA
 
