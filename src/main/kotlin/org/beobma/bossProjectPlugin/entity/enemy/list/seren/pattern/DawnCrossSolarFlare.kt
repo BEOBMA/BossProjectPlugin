@@ -45,10 +45,10 @@ class DawnCrossSolarFlare : PatternSkill() {
     private var previewTask: BukkitTask? = null
     private var firingTask: BukkitTask? = null
 
-    override val name: String = "태양 광휘 교차"
+    override val name: String = "플래시"
     override val description: List<String> = listOf(
-        "<gray>2페이즈 여명에만, 10.5초마다 중심을 가로지르는 3갈래 태양빛이 대각선 교차 형태로 발사된다.",
-        "<gray>발사 2초 전 작은 레이저로 경로가 예고되며, 피격 시 1틱당 10% 피해와 태양 게이지 100, 1초 실명이 적용된다."
+        "<gray>일정 시간마다 중심을 가로지르는 3갈래 태양빛이 대각선 교차 형태로 발사된다.",
+        "<gray>피격당할 때마다 10%의 피해를 입고 태양 게이지가 증가하며, 1초 동안 실명 상태가 된다."
     )
     override val itemStack: ItemStack = ItemStack(Material.BLAZE_ROD)
     override val validPhases: Set<Int> = setOf(2)
@@ -232,7 +232,7 @@ class DawnCrossSolarFlare : PatternSkill() {
     private fun isPatternAvailable(): Boolean {
         val curseOfSun = enemyData.passives.firstOrNull { it is CurseOfSun } as? CurseOfSun ?: return false
         if (!isPhaseValid()) return false
-        if (!curseOfSun.isCurrentPeriodDawn()) return false
+        if (!curseOfSun.isCurrentPeriodNoon()) return false
         if (curseOfSun.isTimeChangePatternActive()) return false
         return true
     }

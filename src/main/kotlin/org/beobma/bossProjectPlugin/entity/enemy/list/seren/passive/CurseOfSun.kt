@@ -35,7 +35,7 @@ class CurseOfSun : BossPassive(), Listener {
     companion object {
         private var timeBossBar: BossBar? = null
 
-        private const val NOON_DURATION_MILLIS = 10_000L // 120_000L
+        private const val NOON_DURATION_MILLIS = 120_000L // 120_000L
         private const val SUNSET_DURATION_MILLIS = 10_000L // 130_000L
         private const val MIDNIGHT_DURATION_MILLIS = 10_000L // 40_000L
         private const val DAWN_DURATION_MILLIS = 10_000L // 130_000L
@@ -159,9 +159,9 @@ class CurseOfSun : BossPassive(), Listener {
     }
 
 
-    fun isCurrentPeriodDawn(): Boolean {
+    fun isCurrentPeriodNoon(): Boolean {
         if (!isPhaseValid()) return false
-        return currentTimePeriod == TimePeriod.DAWN
+        return currentTimePeriod == TimePeriod.NOON
     }
 
     fun isTimeChangePatternActive(): Boolean {
