@@ -183,10 +183,12 @@ class DawnCrossSolarFlare : PatternSkill() {
     }
 
     private fun buildBeamDirections(baseAngle: Double): List<Vector> {
-        val spacing = PI / beamCount
-        return (0 until beamCount).map { index ->
-            val angle = baseAngle + spacing * index
-            Vector(cos(angle), 0.0, sin(angle)).normalize()
+        return buildList {
+            add(Vector(cos(baseAngle), 0.0, sin(baseAngle)).normalize())
+            repeat(beamCount - 1) {
+                val randomAngle = Random.nextDouble(0.0, PI)
+                add(Vector(cos(randomAngle), 0.0, sin(randomAngle)).normalize())
+            }
         }
     }
 
