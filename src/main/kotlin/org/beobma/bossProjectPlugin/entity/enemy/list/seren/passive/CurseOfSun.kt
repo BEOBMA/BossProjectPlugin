@@ -158,6 +158,17 @@ class CurseOfSun : BossPassive(), Listener {
         midnightExpired = false
     }
 
+
+    fun isCurrentPeriodDawn(): Boolean {
+        if (!isPhaseValid()) return false
+        return currentTimePeriod == TimePeriod.DAWN
+    }
+
+    fun isTimeChangePatternActive(): Boolean {
+        if (!isPhaseValid()) return false
+        return safeZonePrepared || pendingPeriodTransition
+    }
+
     fun increaseGauge(player: Player, amount: Int) {
         if (!isPhaseValid()) return
         if (!PlayerDeathLifecycleManager.canBeTargetedByPattern(player)) return
