@@ -43,6 +43,11 @@ class LightArrow : PatternSkill() {
     override val itemStack: ItemStack = ItemStack(Material.END_ROD)
     override val validPhases: Set<Int> = setOf(1)
 
+    override fun inject(enemyData: org.beobma.bossProjectPlugin.entity.enemy.EnemyData) {
+        super.inject(enemyData)
+        markUsedNow()
+    }
+
     override fun canUse(): Boolean = canUseOnCooldown(cooldownTick)
 
     override fun onUse() {
