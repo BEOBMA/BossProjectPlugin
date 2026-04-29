@@ -22,7 +22,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-class DawnCrossSolarFlare : PatternSkill() {
+class Flash : PatternSkill() {
     private val cycleIntervalTick = 210L // 10.5s
     private val previewDurationTick = 40L // 2s
     private val firingDurationTick = 20L // 1s

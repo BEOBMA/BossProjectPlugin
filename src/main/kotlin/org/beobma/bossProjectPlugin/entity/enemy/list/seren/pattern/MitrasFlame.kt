@@ -26,7 +26,7 @@ class MitrasFlame : PatternSkill() {
     private val warningAreaHalfWidth = 1.5
 
     private val centerX = 47.0
-    private val centerY = -35.57565
+    private val centerY = -37.0
     private val centerZ = -76.0
 
     private val damageRatio = 0.35
@@ -38,8 +38,8 @@ class MitrasFlame : PatternSkill() {
 
     override val name: String = "미트라의 불꽃"
     override val description: List<String> = listOf(
-        "<gray>정오 시간마다 맵 중앙 근처 무작위 위치에 폭발 경고를 생성한다.",
-        "<gray>1.77초 후 폭발하며 피격 시 35% 피해, 빗나감, 태양 게이지 증가 효과를 부여한다."
+        "<gray>일정 시간마다 무작위 위치에 폭탄을 설치한다.",
+        "<gray>일정 시간 후 폭발하며 피격 시 35%의 피해를 입고 빗나감 상태가 되며, 태양 게이지가 증가한다."
     )
     override val itemStack: ItemStack = ItemStack(Material.FIRE_CHARGE)
     override val validPhases: Set<Int> = setOf(2)
