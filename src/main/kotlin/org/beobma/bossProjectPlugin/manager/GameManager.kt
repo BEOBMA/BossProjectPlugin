@@ -209,7 +209,10 @@ object GameManager : Listener {
 
         val enemyEntry = EnemyRegistry.randomEnemy()
         val mapData = enemyEntry.mapData
-        val spawnLocation = mapData.spawnLocation()
+        val spawnLocation = mapData.spawnLocation().apply {
+            yaw = 135f
+            pitch = 0f
+        }
 
         game.setupMap(mapData)
         game.setupBoss(enemyEntry.factory(game))
@@ -302,7 +305,11 @@ object GameManager : Listener {
                 .map { it.player }
                 .filter { it.isOnline }
                 .forEach { player ->
-                    player.teleport(nextPhaseBoss.mapData.spawnLocation())
+                    val phaseSpawnLocation = nextPhaseBoss.mapData.spawnLocation().apply {
+                        yaw = 135f
+                        pitch = 0f
+                    }
+                    player.teleport(phaseSpawnLocation)
                     player.isInvulnerable = false
                 }
 
